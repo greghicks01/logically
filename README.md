@@ -1,4 +1,4 @@
-# LogicLy - Digital Logic Circuit Simulator
+# LogicaLLy - Digital Logic Circuit Simulator
 
 Wire Logic Level Visualization and Composite ICs
 
