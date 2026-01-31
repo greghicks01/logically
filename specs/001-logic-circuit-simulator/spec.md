@@ -61,7 +61,27 @@ Users can add D flip-flops and other sequential logic components to build circui
 
 ---
 
-### User Story 4 - Save and Load Circuit Designs (Priority: P4)
+### User Story 4 - Create Custom ICs from Circuits (Priority: P4)
+
+Users can convert any circuit into a reusable custom IC component with configurable pin labels, enabling hierarchical design and circuit abstraction. Custom pins can be labeled with standard conventions (CK for clock, EN for enable, EN̅ for inverted enable, Q/Q̅ for outputs, Q1-Q4 for selectors/binary).
+
+**Why this priority**: This enables modular circuit design and abstraction - users can build complex circuits from simpler building blocks. Essential for creating components like counters, multiplexers, and ALUs that can be reused. This mirrors real-world IC design methodology.
+
+**Independent Test**: Can be tested by building a simple circuit (e.g., SR latch), saving it as a custom IC with labeled pins (S, R, Q, Q̅), then placing the custom IC on a new canvas and verifying it behaves identically to the original circuit.
+
+**Acceptance Scenarios**:
+
+1. **Given** a complete circuit on canvas, **When** user selects "Create IC from Circuit", **Then** system prompts user to define which internal inputs/outputs become IC pins
+2. **Given** IC pin definition dialog, **When** user assigns labels to pins (e.g., CK, EN, EN̅, Q, Q̅, Q1-Q4), **Then** system validates labels and creates the custom IC
+3. **Given** a saved custom IC, **When** user adds it to component library, **Then** custom IC appears in toolbar alongside built-in components
+4. **Given** a custom IC in toolbar, **When** user places it on canvas, **Then** IC appears as a single component with labeled pins matching the definitions
+5. **Given** a custom IC on canvas, **When** user connects inputs and toggles them, **Then** IC outputs respond identically to original circuit behavior
+6. **Given** a pin label with overbar notation (e.g., Q̅, EN̅), **When** IC is displayed, **Then** overbar appears correctly rendered above the character
+7. **Given** a custom IC, **When** user double-clicks it, **Then** user can view the internal circuit diagram (optional: edit mode)
+
+---
+
+### User Story 5 - Save and Load Circuit Designs (Priority: P5)
 
 Users can save their circuit designs and reload them later to continue working or share with others.
 
@@ -77,7 +97,7 @@ Users can save their circuit designs and reload them later to continue working o
 
 ---
 
-### User Story 5 - Visual Circuit Design and Editing (Priority: P5)
+### User Story 6 - Visual Circuit Design and Editing (Priority: P6)
 
 Users can easily manipulate circuit layouts by moving components, deleting connections, and organizing their workspace for clarity.
 
@@ -102,6 +122,10 @@ Users can easily manipulate circuit layouts by moving components, deleting conne
 - How does system handle very large circuits with hundreds of gates (performance)?
 - What happens when clock signal to flip-flop is provided manually vs automatically?
 - How are floating/unconnected inputs handled (default to LOW or undefined)?
+- What happens when user creates a custom IC from a circuit that itself contains custom ICs (nested ICs)?
+- How does system handle custom IC updates - do instances update when the IC definition changes?
+- What happens if user tries to use invalid characters or duplicate names for IC pin labels?
+- How are power and ground pins handled in custom ICs (user specifies these are excluded)?
 
 ## Requirements *(mandatory)*
 
@@ -122,7 +146,20 @@ Users can easily manipulate circuit layouts by moving components, deleting conne
 - **FR-013**: System MUST allow users to delete components and wires
 - **FR-014**: System MUST save circuit designs including all components, connections, and positions
 - **FR-015**: System MUST load previously saved circuit designs and restore full circuit state
-- **FR-016**: System MUST prevent invalid connections (output-to-output, input-to-input)
+- **FR-016**: System MUST prevent invalid connections (output-to-output, input-to-inpu
+- **FR-021**: System MUST allow users to convert any circuit into a custom IC component
+- **FR-022**: System MUST enable users to define which circuit inputs/outputs become IC pins
+- **FR-023**: System MUST support custom pin labeling with standard naming conventions (CK, EN, Q, etc.)
+- **FR-024**: System MUST support overbar/vinculum notation for inverted signals (EN̅, Q̅) in pin labels
+- **FR-025**: System MUST support numeric pin labels for multi-bit signals (Q1, Q2, Q3, Q4, etc.)
+- **FR-026**: System MUST exclude power and ground pins from custom IC definitions (as specified by user)
+- **FR-027**: System MUST store custom ICs in a reusable component library
+- **FR-028**: System MUST allow placement of custom ICs on canvas like built-in components
+- **FR-029**: System MUST ensure custom IC instances behave identically to their original circuit
+- **FR-030**: System MUST provide visual representation of custom ICs with labeled pins
+- **Custom IC**: User-created component encapsulating a complete circuit with defined input/output pins, custom pin labels (CK, EN, EN̅, Q, Q̅, Q1-Q4, etc.), internal circuit definition, and visual representation; behaves as reusable component
+- **IC Pin**: Named connection point on custom IC with label, direction (input/output), and optional overbar notation for inverted signals
+- **FR-031**: System MUST allow users to view internal circuit structure of custom ICst)
 - **FR-017**: System MUST visually distinguish between HIGH and LOW signal states on wires and outputs
 - **FR-018**: System MUST handle unconnected inputs with defined default behavior (default to LOW)
 - **FR-019**: System MUST provide clock signal generation for sequential circuits (manual toggle or automatic pulse)
@@ -132,7 +169,10 @@ Users can easily manipulate circuit layouts by moving components, deleting conne
 
 - **Logic Gate**: Represents a digital logic component (AND, OR, NOT, NAND, NOR, XOR, XNOR) with configurable input count, fixed output count (typically 1), gate type, position on canvas, and unique identifier
 - **Wire/Connection**: Represents signal path between components with source (output pin), destination (input pin), and current signal state (HIGH/LOW)
-- **D Flip-Flop**: Sequential logic component with D data input, CLK clock input, Q output, Q̅ inverted output, and internal state storage
+- **D Flip-Flop**: Sequential logic component with D data input, CLK clock input, Q output, Q̅ inverted output, and in
+- **SC-009**: Users can create a custom IC from an existing circuit (including pin labeling) in under 60 seconds
+- **SC-010**: Custom IC instances perform identically to original circuits with zero behavioral deviation
+- **SC-011**: Pin labels with overbar notation (Q̅, EN̅) render correctly 100% of the timeternal state storage
 - **Input Switch**: User-controllable input source with toggleable state (HIGH/LOW) and position
 - **Output Indicator**: Visual output display showing current signal state (HIGH/LOW) at a specific point
 - **Circuit**: Container for all components and connections, representing the complete design with metadata (name, creation date, version)
@@ -144,7 +184,12 @@ Users can easily manipulate circuit layouts by moving components, deleting conne
 
 - **SC-001**: Users can build a simple 2-input logic circuit (e.g., AND gate with switches and LED) in under 30 seconds
 - **SC-002**: System correctly evaluates combinational logic circuits with up to 50 gates without perceptible delay (under 100ms)
-- **SC-003**: D flip-flop correctly stores and outputs state across 100 consecutive clock cycles
+- **SC-003**: D flip-flop correctly stores and outputs state across 100 con
+- Custom IC pin labels follow standard digital logic conventions (CK, EN, Q, D, S, R, etc.)
+- Overbar notation uses Unicode combining character or specific rendering for inverted signals
+- Custom ICs can be nested (ICs containing other custom ICs) up to reasonable depth limit
+- Power (VCC) and ground (GND) pins are excluded from custom IC definitions as specified by user
+- Custom IC instances are independent - changes to IC definition don't auto-update existing instances in MVPsecutive clock cycles
 - **SC-004**: 90% of users can successfully build and test a half-adder circuit within 5 minutes
 - **SC-005**: Circuit save and load operations preserve 100% of circuit configuration with no data loss
 - **SC-006**: Users can create, save, and reload complex circuits containing 20+ components within 2 minutes total workflow time
@@ -154,7 +199,11 @@ Users can easily manipulate circuit layouts by moving components, deleting conne
 ## Assumptions
 
 - Users have basic understanding of digital logic concepts (HIGH/LOW, basic gate functions)
-- Web UI will be the primary interface (browser-based application)
+- Web UI will be the primary interface (brows
+- Automatic IC instance updates when IC definition changes (manual re-import required)
+- Custom IC versioning and change tracking
+- Power and ground pin modeling in custom ICs
+- Parametric/configurable custom ICs (different variants of same IC)er-based application)
 - TTL-style refers to visual appearance and behavior consistent with TTL (Transistor-Transistor Logic) integrated circuits
 - Default input count for multi-input gates is 2 unless user configures otherwise
 - Clock signals for flip-flops can be controlled both manually (user toggle) and automatically (configurable frequency)
