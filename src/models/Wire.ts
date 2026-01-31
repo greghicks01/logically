@@ -15,12 +15,16 @@ export class Wire {
   path: Point[];
   color: string;
   drivers: OutputPin[];
+  startPinId?: string;
+  endPinId?: string;
 
   constructor(
     id: string,
     source: PinConnection | null = null,
     destinations: PinConnection[] = [],
-    path: Point[] = []
+    path: Point[] = [],
+    startPinId?: string,
+    endPinId?: string
   ) {
     this.id = id;
     this.source = source;
@@ -28,6 +32,8 @@ export class Wire {
     this.logicLevel = LogicLevel.HI_Z;
     this.path = path;
     this.drivers = [];
+    this.startPinId = startPinId;
+    this.endPinId = endPinId;
     this.color = getWireColor(this.logicLevel);
   }
 
@@ -98,7 +104,9 @@ export function createWire(
   id: string,
   source: PinConnection | null = null,
   destinations: PinConnection[] = [],
-  path: Point[] = []
+  path: Point[] = [],
+  startPinId?: string,
+  endPinId?: string
 ): Wire {
-  return new Wire(id, source, destinations, path);
+  return new Wire(id, source, destinations, path, startPinId, endPinId);
 }

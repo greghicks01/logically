@@ -3,13 +3,31 @@ import './GateConfigDialog.css';
 
 export interface GateConfigDialogProps {
   isOpen: boolean;
+  gateType?: string;
+  initialNumInputs?: number;
+  initialName?: string;
   onConfirm: (config: { numInputs: number; name?: string }) => void;
   onCancel: () => void;
 }
 
-export const GateConfigDialog: React.FC<GateConfigDialogProps> = ({ isOpen, onConfirm, onCancel }) => {
-  const [numInputs, setNumInputs] = useState(2);
-  const [name, setName] = useState('');
+export const GateConfigDialog: React.FC<GateConfigDialogProps> = ({ 
+  isOpen, 
+  gateType, 
+  initialNumInputs = 2,
+  initialName = '',
+  onConfirm, 
+  onCancel 
+}) => {
+  const [numInputs, setNumInputs] = useState(initialNumInputs);
+  const [name, setName] = useState(initialName);
+
+  // Update state when initial values change (for editing mode)
+  React.useEffect(() => {
+    if (isOpen) {
+      setNumInputs(initialNumInputs);
+      setName(initialName);
+    }
+  }, [isOpen, initialNumInputs, initialName]);
 
   if (!isOpen) return null;
 
@@ -34,7 +52,7 @@ export const GateConfigDialog: React.FC<GateConfigDialogProps> = ({ isOpen, onCo
   return (
     <div className="gate-config-overlay" onClick={handleCancel}>
       <div className="gate-config-dialog" onClick={(e) => e.stopPropagation()}>
-        <h2>Configure AND Gate</h2>
+        <h2>Configure {gateType ? gateType.toUpperCase() : 'Gate'}</h2>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="numInputs">

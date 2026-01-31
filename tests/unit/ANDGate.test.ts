@@ -10,33 +10,33 @@ describe('AND Gate Model', () => {
 
     expect(gate.id).toBe(id);
     expect(gate.position).toEqual(position);
-    expect(gate.inputPinA.state).toBe(LogicLevel.LOW);
-    expect(gate.inputPinB.state).toBe(LogicLevel.LOW);
+    expect(gate.inputPins[0].state).toBe(LogicLevel.LOW);
+    expect(gate.inputPins[1].state).toBe(LogicLevel.LOW);
     expect(gate.outputPin.state).toBe(LogicLevel.LOW);
   });
 
   it('should create pins with correct position offsets', () => {
     const gate = createANDGate(id, position);
 
-    expect(gate.inputPinA.position).toEqual({
+    expect(gate.inputPins[0].position).toEqual({
       x: position.x,
-      y: position.y + 10,
+      y: position.y - 7.5,
     });
-    expect(gate.inputPinB.position).toEqual({
+    expect(gate.inputPins[1].position).toEqual({
       x: position.x,
-      y: position.y + 30,
+      y: position.y + 7.5,
     });
     expect(gate.outputPin.position).toEqual({
       x: position.x + 60,
-      y: position.y + 20,
+      y: position.y,
     });
   });
 
   it('should create unique pin IDs', () => {
     const gate = createANDGate(id, position);
 
-    expect(gate.inputPinA.id).toBe('and-1-inA');
-    expect(gate.inputPinB.id).toBe('and-1-inB');
+    expect(gate.inputPins[0].id).toBe('and-1-in0');
+    expect(gate.inputPins[1].id).toBe('and-1-in1');
     expect(gate.outputPin.id).toBe('and-1-out');
   });
 

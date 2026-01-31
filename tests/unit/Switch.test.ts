@@ -18,7 +18,7 @@ describe('Switch Model', () => {
     const sw = createSwitch(id, position);
 
     expect(sw.outputPin.position).toEqual({
-      x: position.x + 40,
+      x: position.x + 50,
       y: position.y + 15,
     });
   });

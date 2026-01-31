@@ -99,7 +99,9 @@ export function useWiring(): UseWiringResult {
       `wire-${Date.now()}`,
       null,
       [],
-      [wiringState.startPin.position, endPin.position]
+      [wiringState.startPin.position, endPin.position],
+      wiringState.startPin.id,
+      endPin.id
     );
 
     // Reset wiring state

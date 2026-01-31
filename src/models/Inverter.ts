@@ -30,7 +30,7 @@ export function createInverter(id: string, position: Point, name?: string): Inve
     outputPin: {
       id: `${id}-out`,
       label: 'OUT',
-      position: { x: position.x + 50, y: position.y },
+      position: { x: position.x + 45, y: position.y }, // After the bubble (35 + 5 radius + 5)
       state: LogicLevel.HIGH, // Inverted initial state
     },
   };

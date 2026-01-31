@@ -38,7 +38,7 @@ export const SwitchComponent: React.FC<SwitchComponentProps> = ({ component, onT
       
       {/* Output pin */}
       <circle
-        cx={position.x + 40}
+        cx={position.x + 50}
         cy={position.y + 15}
         r={4}
         fill={state ? '#CC0000' : '#0066CC'}

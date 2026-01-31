@@ -45,7 +45,7 @@ export function createNORGate(id: string, position: Point, numInputs: number = 2
     outputPin: {
       id: `${id}-out`,
       label: 'OUT',
-      position: { x: position.x + 60, y: position.y },
+      position: { x: position.x + 64, y: position.y }, // After the bubble (52 + 6 radius + 6)
       state: LogicLevel.HIGH, // NOR defaults to HIGH with all LOW inputs
     },
   };

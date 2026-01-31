@@ -22,7 +22,7 @@ export function createSwitch(id: string, position: Point): Switch {
     outputPin: {
       id: `${id}-out`,
       label: 'OUT',
-      position: { x: position.x + 40, y: position.y + 15 },
+      position: { x: position.x + 50, y: position.y + 15 }, // Outside the switch body (40px width + 10px offset)
       state: LogicLevel.LOW,
     },
     state: false,

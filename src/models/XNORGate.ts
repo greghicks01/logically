@@ -45,7 +45,7 @@ export function createXNORGate(id: string, position: Point, numInputs: number = 
     outputPin: {
       id: `${id}-out`,
       label: 'OUT',
-      position: { x: position.x + 60, y: position.y },
+      position: { x: position.x + 64, y: position.y }, // After the bubble (52 + 6 radius + 6)
       state: LogicLevel.HIGH, // XNOR defaults to HIGH with even number of HIGH inputs (0 is even)
     },
   };
