@@ -1,7 +1,7 @@
 import React from 'react';
 import './ComponentPalette.css';
 
-export type ComponentType = 'switch' | 'and-gate' | 'buffer' | 'inverter' | 'light';
+export type ComponentType = 'switch' | 'and-gate' | 'or-gate' | 'nand-gate' | 'nor-gate' | 'xor-gate' | 'xnor-gate' | 'buffer' | 'inverter' | 'light';
 
 export interface ComponentPaletteProps {
   onSelectComponent: (type: ComponentType) => void;
@@ -17,6 +17,11 @@ interface PaletteItem {
 const paletteItems: PaletteItem[] = [
   { type: 'switch', label: 'Switch', icon: '⚡' },
   { type: 'and-gate', label: 'AND Gate', icon: '&' },
+  { type: 'or-gate', label: 'OR Gate', icon: '≥1' },
+  { type: 'nand-gate', label: 'NAND Gate', icon: '⊼' },
+  { type: 'nor-gate', label: 'NOR Gate', icon: '⊽' },
+  { type: 'xor-gate', label: 'XOR Gate', icon: '⊕' },
+  { type: 'xnor-gate', label: 'XNOR Gate', icon: '⊙' },
   { type: 'buffer', label: 'Buffer', icon: '▷' },
   { type: 'inverter', label: 'Inverter', icon: '▷○' },
   { type: 'light', label: 'Light', icon: '💡' },

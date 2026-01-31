@@ -1,12 +1,23 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Switch, createSwitch, toggleSwitch } from '../../models/Switch';
 import { ANDGate, createANDGate, computeANDOutput } from '../../models/ANDGate';
+import { ORGate, createORGate, computeOROutput } from '../../models/ORGate';
+import { NANDGate, createNANDGate, computeNANDOutput } from '../../models/NANDGate';
+import { NORGate, createNORGate, computeNOROutput } from '../../models/NORGate';
+import { XORGate, createXORGate, computeXOROutput } from '../../models/XORGate';
+import { XNORGate, createXNORGate, computeXNOROutput } from '../../models/XNORGate';
 import { Buffer, createBuffer, computeBufferOutput } from '../../models/Buffer';
 import { Inverter, createInverter, computeInverterOutput } from '../../models/Inverter';
 import { LightIndicator, createLightIndicator } from '../../models/LightIndicator';
 import { Wire } from '../../models/Wire';
+import { LogicLevel } from '../../models/LogicLevel';
 import { SwitchComponent } from '../Switch/SwitchComponent';
 import { ANDGateComponent } from '../ANDGate/ANDGateComponent';
+import { ORGateComponent } from '../ORGate/ORGateComponent';
+import { NANDGateComponent } from '../NANDGate/NANDGateComponent';
+import { NORGateComponent } from '../NORGate/NORGateComponent';
+import { XORGateComponent } from '../XORGate/XORGateComponent';
+import { XNORGateComponent } from '../XNORGate/XNORGateComponent';
 import { BufferComponent } from '../Buffer/BufferComponent';
 import { InverterComponent } from '../Inverter/InverterComponent';
 import { LightIndicatorComponent } from '../LightIndicator/LightIndicatorComponent';
@@ -37,6 +48,11 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
 }) => {
   const [switches, setSwitches] = useState<Switch[]>([]);
   const [andGates, setAndGates] = useState<ANDGate[]>([]);
+  const [orGates, setOrGates] = useState<ORGate[]>([]);
+  const [nandGates, setNandGates] = useState<NANDGate[]>([]);
+  const [norGates, setNorGates] = useState<NORGate[]>([]);
+  const [xorGates, setXorGates] = useState<XORGate[]>([]);
+  const [xnorGates, setXnorGates] = useState<XNORGate[]>([]);
   const [buffers, setBuffers] = useState<Buffer[]>([]);
   const [inverters, setInverters] = useState<Inverter[]>([]);
   const [lights, setLights] = useState<LightIndicator[]>([]);
@@ -45,6 +61,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
   // Gate configuration dialog state
   const [showGateDialog, setShowGateDialog] = useState(false);
   const [pendingGatePosition, setPendingGatePosition] = useState<Point | null>(null);
+  const [pendingGateType, setPendingGateType] = useState<ComponentType | null>(null);
   
   // Drag state
   const [draggedComponent, setDraggedComponent] = useState<{ type: string; id: string; offset: Point } | null>(null);
@@ -91,9 +108,12 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
       const newSwitch = createSwitch(generateId('switch'), position);
       setSwitches([...switches, newSwitch]);
       onComponentPlaced();
-    } else if (selectedComponent === 'and-gate') {
+    } else if (selectedComponent === 'and-gate' || selectedComponent === 'or-gate' || 
+               selectedComponent === 'nand-gate' || selectedComponent === 'nor-gate' ||
+               selectedComponent === 'xor-gate' || selectedComponent === 'xnor-gate') {
       // Show dialog for gate configuration
       setPendingGatePosition(position);
+      setPendingGateType(selectedComponent);
       setShowGateDialog(true);
     } else if (selectedComponent === 'buffer') {
       const newBuffer = createBuffer(generateId('buffer'), position);
@@ -112,18 +132,37 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
 
   // Handle gate configuration dialog
   const handleGateConfigConfirm = (config: { numInputs: number; name?: string }) => {
-    if (pendingGatePosition) {
-      const newGate = createANDGate(generateId('and'), pendingGatePosition, config.numInputs, config.name);
-      setAndGates([...andGates, newGate]);
+    if (pendingGatePosition && pendingGateType) {
+      if (pendingGateType === 'and-gate') {
+        const newGate = createANDGate(generateId('and'), pendingGatePosition, config.numInputs, config.name);
+        setAndGates([...andGates, newGate]);
+      } else if (pendingGateType === 'or-gate') {
+        const newGate = createORGate(generateId('or'), pendingGatePosition, config.numInputs, config.name);
+        setOrGates([...orGates, newGate]);
+      } else if (pendingGateType === 'nand-gate') {
+        const newGate = createNANDGate(generateId('nand'), pendingGatePosition, config.numInputs, config.name);
+        setNandGates([...nandGates, newGate]);
+      } else if (pendingGateType === 'nor-gate') {
+        const newGate = createNORGate(generateId('nor'), pendingGatePosition, config.numInputs, config.name);
+        setNorGates([...norGates, newGate]);
+      } else if (pendingGateType === 'xor-gate') {
+        const newGate = createXORGate(generateId('xor'), pendingGatePosition, config.numInputs, config.name);
+        setXorGates([...xorGates, newGate]);
+      } else if (pendingGateType === 'xnor-gate') {
+        const newGate = createXNORGate(generateId('xnor'), pendingGatePosition, config.numInputs, config.name);
+        setXnorGates([...xnorGates, newGate]);
+      }
       onComponentPlaced();
     }
     setShowGateDialog(false);
     setPendingGatePosition(null);
+    setPendingGateType(null);
   };
 
   const handleGateConfigCancel = () => {
     setShowGateDialog(false);
     setPendingGatePosition(null);
+    setPendingGateType(null);
   };
 
   // Handle component mouse down for dragging
@@ -160,23 +199,71 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
 
   // Handle delete component
   const handleDeleteComponent = (componentType: string, componentId: string) => {
+    // Get all pins of the component being deleted
+    let componentPins: Pin[] = [];
+    
     if (componentType === 'switch') {
+      const component = switches.find(sw => sw.id === componentId);
+      if (component) componentPins.push(component.outputPin);
       setSwitches(switches.filter(sw => sw.id !== componentId));
     } else if (componentType === 'and-gate') {
+      const component = andGates.find(gate => gate.id === componentId);
+      if (component) componentPins.push(...component.inputPins, component.outputPin);
       setAndGates(andGates.filter(gate => gate.id !== componentId));
+    } else if (componentType === 'or-gate') {
+      const component = orGates.find(gate => gate.id === componentId);
+      if (component) componentPins.push(...component.inputPins, component.outputPin);
+      setOrGates(orGates.filter(gate => gate.id !== componentId));
+    } else if (componentType === 'nand-gate') {
+      const component = nandGates.find(gate => gate.id === componentId);
+      if (component) componentPins.push(...component.inputPins, component.outputPin);
+      setNandGates(nandGates.filter(gate => gate.id !== componentId));
+    } else if (componentType === 'nor-gate') {
+      const component = norGates.find(gate => gate.id === componentId);
+      if (component) componentPins.push(...component.inputPins, component.outputPin);
+      setNorGates(norGates.filter(gate => gate.id !== componentId));
+    } else if (componentType === 'xor-gate') {
+      const component = xorGates.find(gate => gate.id === componentId);
+      if (component) componentPins.push(...component.inputPins, component.outputPin);
+      setXorGates(xorGates.filter(gate => gate.id !== componentId));
+    } else if (componentType === 'xnor-gate') {
+      const component = xnorGates.find(gate => gate.id === componentId);
+      if (component) componentPins.push(...component.inputPins, component.outputPin);
+      setXnorGates(xnorGates.filter(gate => gate.id !== componentId));
     } else if (componentType === 'buffer') {
+      const component = buffers.find(buffer => buffer.id === componentId);
+      if (component) componentPins.push(component.inputPin, component.outputPin);
       setBuffers(buffers.filter(buffer => buffer.id !== componentId));
     } else if (componentType === 'inverter') {
+      const component = inverters.find(inverter => inverter.id === componentId);
+      if (component) componentPins.push(component.inputPin, component.outputPin);
       setInverters(inverters.filter(inverter => inverter.id !== componentId));
     } else if (componentType === 'light') {
+      const component = lights.find(light => light.id === componentId);
+      if (component) componentPins.push(component.inputPin);
       setLights(lights.filter(light => light.id !== componentId));
     }
     
-    // Remove connected wires
+    // Remove wires connected to any pin of the deleted component
     setWires(wires.filter(wire => {
-      // Check if wire is connected to this component's pins
-      // For simplicity, we'll keep all wires for now
-      return true;
+      if (wire.path.length < 2) return true;
+      
+      const wireStart = wire.path[0];
+      const wireEnd = wire.path[wire.path.length - 1];
+      
+      // Check if wire connects to any pin of the deleted component
+      for (const pin of componentPins) {
+        const connectsToStart = Math.abs(wireStart.x - pin.position.x) < 8 && 
+                                Math.abs(wireStart.y - pin.position.y) < 8;
+        const connectsToEnd = Math.abs(wireEnd.x - pin.position.x) < 8 && 
+                              Math.abs(wireEnd.y - pin.position.y) < 8;
+        
+        if (connectsToStart || connectsToEnd) {
+          return false; // Remove this wire
+        }
+      }
+      
+      return true; // Keep this wire
     }));
   };
 
@@ -240,6 +327,23 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
       const y = event.clientY - rect.top - draggedComponent.offset.y;
       const newPosition: Point = { x, y };
       
+      // Helper function to update multi-input gate positions
+      const updateGatePosition = (gate: ANDGate | ORGate | NANDGate | NORGate | XORGate | XNORGate) => {
+        const inputSpacing = 15;
+        const totalHeight = Math.max(40, (gate.numInputs - 1) * inputSpacing + 20);
+        const startY = newPosition.y - totalHeight / 2;
+        
+        return {
+          ...gate,
+          position: newPosition,
+          inputPins: gate.inputPins.map((pin, i) => ({
+            ...pin,
+            position: { x: newPosition.x, y: startY + i * inputSpacing }
+          })),
+          outputPin: { ...gate.outputPin, position: { x: newPosition.x + 60, y: newPosition.y } }
+        };
+      };
+      
       // Update component position
       if (draggedComponent.type === 'switch') {
         setSwitches(switches.map(sw => 
@@ -248,24 +352,29 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
             : sw
         ));
       } else if (draggedComponent.type === 'and-gate') {
-        setAndGates(andGates.map(gate => {
-          if (gate.id !== draggedComponent.id) return gate;
-          
-          // Recalculate pin positions based on new gate position
-          const inputSpacing = 15;
-          const totalHeight = Math.max(40, (gate.numInputs - 1) * inputSpacing + 20);
-          const startY = newPosition.y - totalHeight / 2;
-          
-          return {
-            ...gate,
-            position: newPosition,
-            inputPins: gate.inputPins.map((pin, i) => ({
-              ...pin,
-              position: { x: newPosition.x, y: startY + i * inputSpacing }
-            })),
-            outputPin: { ...gate.outputPin, position: { x: newPosition.x + 60, y: newPosition.y } }
-          };
-        }));
+        setAndGates(andGates.map(gate => 
+          gate.id === draggedComponent.id ? updateGatePosition(gate) : gate
+        ));
+      } else if (draggedComponent.type === 'or-gate') {
+        setOrGates(orGates.map(gate => 
+          gate.id === draggedComponent.id ? updateGatePosition(gate) : gate
+        ));
+      } else if (draggedComponent.type === 'nand-gate') {
+        setNandGates(nandGates.map(gate => 
+          gate.id === draggedComponent.id ? updateGatePosition(gate) : gate
+        ));
+      } else if (draggedComponent.type === 'nor-gate') {
+        setNorGates(norGates.map(gate => 
+          gate.id === draggedComponent.id ? updateGatePosition(gate) : gate
+        ));
+      } else if (draggedComponent.type === 'xor-gate') {
+        setXorGates(xorGates.map(gate => 
+          gate.id === draggedComponent.id ? updateGatePosition(gate) : gate
+        ));
+      } else if (draggedComponent.type === 'xnor-gate') {
+        setXnorGates(xnorGates.map(gate => 
+          gate.id === draggedComponent.id ? updateGatePosition(gate) : gate
+        ));
       } else if (draggedComponent.type === 'buffer') {
         setBuffers(buffers.map(buffer =>
           buffer.id === draggedComponent.id
@@ -366,23 +475,40 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
         const updatedWires = [...wires, newWire];
         setWires(updatedWires);
         // Propagate logic after wiring with updated state
-        setTimeout(() => propagateLogic(switches, andGates, buffers, inverters, lights, updatedWires), 10);
+        setTimeout(() => propagateLogic(switches, andGates, orGates, nandGates, norGates, xorGates, xnorGates, buffers, inverters, lights, updatedWires), 10);
       }
     }
-  }, [wiringState.isWiring, startWiring, completeWiring, wires, switches, andGates, buffers, inverters, lights]);
+  }, [wiringState.isWiring, startWiring, completeWiring, wires, switches, andGates, orGates, nandGates, norGates, xorGates, xnorGates, buffers, inverters, lights]);
 
   // Handle switch toggle
   const handleSwitchToggle = (id: string) => {
     const updatedSwitches = switches.map((sw) => (sw.id === id ? toggleSwitch(sw) : sw));
     setSwitches(updatedSwitches);
     // Propagate changes through circuit after state update
-    setTimeout(() => propagateLogic(updatedSwitches, andGates, buffers, inverters, lights, wires), 10);
+    setTimeout(() => propagateLogic(updatedSwitches, andGates, orGates, nandGates, norGates, xorGates, xnorGates, buffers, inverters, lights, wires), 10);
   };
 
   // Propagate logic through the circuit
-  const propagateLogic = (currentSwitches = switches, currentGates = andGates, currentBuffers = buffers, currentInverters = inverters, currentLights = lights, currentWires = wires) => {
+  const propagateLogic = (
+    currentSwitches = switches, 
+    currentAndGates = andGates,
+    currentOrGates = orGates,
+    currentNandGates = nandGates,
+    currentNorGates = norGates,
+    currentXorGates = xorGates,
+    currentXnorGates = xnorGates,
+    currentBuffers = buffers, 
+    currentInverters = inverters, 
+    currentLights = lights, 
+    currentWires = wires
+  ) => {
     // Iteratively propagate through gates until stable (handles multi-level circuits)
-    let updatedGates = [...currentGates];
+    let updatedAndGates = [...currentAndGates];
+    let updatedOrGates = [...currentOrGates];
+    let updatedNandGates = [...currentNandGates];
+    let updatedNorGates = [...currentNorGates];
+    let updatedXorGates = [...currentXorGates];
+    let updatedXnorGates = [...currentXnorGates];
     let updatedBuffers = [...currentBuffers];
     let updatedInverters = [...currentInverters];
     let maxIterations = 10; // Prevent infinite loops
@@ -393,8 +519,8 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
       changed = false;
       iteration++;
       
-      // Step 1: Update AND gate inputs based on connected wires
-      const newGates = updatedGates.map((gate) => {
+      // Helper function to update gate inputs and outputs
+      const updateMultiInputGate = (gate: ANDGate | ORGate | NANDGate | NORGate | XORGate | XNORGate, computeOutput: (...inputs: LogicLevel[]) => LogicLevel) => {
         let newGate = { ...gate, inputPins: [...gate.inputPins] };
         let gateChanged = false;
         
@@ -421,7 +547,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
               const isStartAtPin = Math.abs(wireStart.x - inputPin.position.x) < 8 && 
                                    Math.abs(wireStart.y - inputPin.position.y) < 8;
               const sourcePos = isStartAtPin ? wireEnd : wireStart;
-              const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedGates);
+              const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates, updatedBuffers, updatedInverters);
               if (sourceState !== null && sourceState !== updatedPin.state) {
                 updatedPin = { ...updatedPin, state: sourceState };
                 gateChanged = true;
@@ -434,7 +560,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
         
         // Compute output based on all inputs
         const inputStates = newGate.inputPins.map(pin => pin.state);
-        const output = computeANDOutput(...inputStates);
+        const output = computeOutput(...inputStates);
         if (output !== newGate.outputPin.state) {
           newGate = {
             ...newGate,
@@ -445,9 +571,15 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
         
         if (gateChanged) changed = true;
         return newGate;
-      });
+      };
       
-      updatedGates = newGates;
+      // Step 1: Update all gate types
+      updatedAndGates = updatedAndGates.map(gate => updateMultiInputGate(gate, computeANDOutput));
+      updatedOrGates = updatedOrGates.map(gate => updateMultiInputGate(gate, computeOROutput));
+      updatedNandGates = updatedNandGates.map(gate => updateMultiInputGate(gate, computeNANDOutput));
+      updatedNorGates = updatedNorGates.map(gate => updateMultiInputGate(gate, computeNOROutput));
+      updatedXorGates = updatedXorGates.map(gate => updateMultiInputGate(gate, computeXOROutput));
+      updatedXnorGates = updatedXnorGates.map(gate => updateMultiInputGate(gate, computeXNOROutput));
       
       // Step 1b: Update buffer inputs and outputs
       const newBuffers = updatedBuffers.map((buffer) => {
@@ -471,7 +603,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
             const isStartAtInput = Math.abs(wireStart.x - buffer.inputPin.position.x) < 8 && 
                                     Math.abs(wireStart.y - buffer.inputPin.position.y) < 8;
             const sourcePos = isStartAtInput ? wireEnd : wireStart;
-            const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedGates, updatedBuffers, updatedInverters);
+            const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates, updatedBuffers, updatedInverters);
             if (sourceState !== null && sourceState !== newBuffer.inputPin.state) {
               newBuffer = {
                 ...newBuffer,
@@ -520,7 +652,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
             const isStartAtInput = Math.abs(wireStart.x - inverter.inputPin.position.x) < 8 && 
                                     Math.abs(wireStart.y - inverter.inputPin.position.y) < 8;
             const sourcePos = isStartAtInput ? wireEnd : wireStart;
-            const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedGates, updatedBuffers, updatedInverters);
+            const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates, updatedBuffers, updatedInverters);
             if (sourceState !== null && sourceState !== newInverter.inputPin.state) {
               newInverter = {
                 ...newInverter,
@@ -548,7 +680,12 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
       updatedInverters = newInverters;
     }
     
-    setAndGates(updatedGates);
+    setAndGates(updatedAndGates);
+    setOrGates(updatedOrGates);
+    setNandGates(updatedNandGates);
+    setNorGates(updatedNorGates);
+    setXorGates(updatedXorGates);
+    setXnorGates(updatedXnorGates);
     setBuffers(updatedBuffers);
     setInverters(updatedInverters);
     
@@ -560,8 +697,8 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
       const wireEnd = wire.path[wire.path.length - 1];
       
       // Find the source pin (could be at either end)
-      const startState = findPinStateAtPosition(wireStart, currentSwitches, updatedGates, updatedBuffers, updatedInverters);
-      const endState = findPinStateAtPosition(wireEnd, currentSwitches, updatedGates, updatedBuffers, updatedInverters);
+      const startState = findPinStateAtPosition(wireStart, currentSwitches, updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates, updatedBuffers, updatedInverters);
+      const endState = findPinStateAtPosition(wireEnd, currentSwitches, updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates, updatedBuffers, updatedInverters);
       
       // Use whichever end has a source (output pin)
       const logicLevel = startState !== null ? startState : (endState !== null ? endState : LogicLevel.HI_Z);
@@ -595,7 +732,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
           const isStartAtLight = Math.abs(wireStart.x - light.inputPin.position.x) < 8 && 
                                   Math.abs(wireStart.y - light.inputPin.position.y) < 8;
           const sourcePos = isStartAtLight ? wireEnd : wireStart;
-          const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedGates, updatedBuffers, updatedInverters);
+          const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates, updatedBuffers, updatedInverters);
           if (sourceState !== null) {
             inputState = sourceState;
           }
@@ -613,7 +750,18 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
   };
 
   // Find the logic state at a given position
-  const findPinStateAtPosition = (pos: Point, currentSwitches = switches, gates = andGates, currentBuffers = buffers, currentInverters = inverters) => {
+  const findPinStateAtPosition = (
+    pos: Point, 
+    currentSwitches = switches, 
+    currentAndGates = andGates,
+    currentOrGates = orGates,
+    currentNandGates = nandGates,
+    currentNorGates = norGates,
+    currentXorGates = xorGates,
+    currentXnorGates = xnorGates,
+    currentBuffers = buffers, 
+    currentInverters = inverters
+  ) => {
     // Check switches
     for (const sw of currentSwitches) {
       if (Math.abs(pos.x - sw.outputPin.position.x) < 8 && 
@@ -622,8 +770,16 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
       }
     }
     
-    // Check AND gates
-    for (const gate of gates) {
+    // Check all gate types
+    const allGates = [
+      ...currentAndGates,
+      ...currentOrGates,
+      ...currentNandGates,
+      ...currentNorGates,
+      ...currentXorGates,
+      ...currentXnorGates
+    ];
+    for (const gate of allGates) {
       if (Math.abs(pos.x - gate.outputPin.position.x) < 8 && 
           Math.abs(pos.y - gate.outputPin.position.y) < 8) {
         return gate.outputPin.state;
@@ -655,6 +811,21 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
     
     switches.forEach(sw => pins.push(sw.outputPin));
     andGates.forEach(gate => {
+      pins.push(...gate.inputPins, gate.outputPin);
+    });
+    orGates.forEach(gate => {
+      pins.push(...gate.inputPins, gate.outputPin);
+    });
+    nandGates.forEach(gate => {
+      pins.push(...gate.inputPins, gate.outputPin);
+    });
+    norGates.forEach(gate => {
+      pins.push(...gate.inputPins, gate.outputPin);
+    });
+    xorGates.forEach(gate => {
+      pins.push(...gate.inputPins, gate.outputPin);
+    });
+    xnorGates.forEach(gate => {
       pins.push(...gate.inputPins, gate.outputPin);
     });
     buffers.forEach(buffer => {
@@ -718,6 +889,66 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
             style={{ cursor: draggedComponent?.id === gate.id ? 'grabbing' : 'grab' }}
           >
             <ANDGateComponent component={gate} />
+          </g>
+        ))}
+
+        {/* Render OR gates */}
+        {orGates.map((gate) => (
+          <g
+            key={gate.id}
+            onMouseDown={(e) => handleComponentMouseDown(e, 'or-gate', gate.id, gate.position)}
+            onContextMenu={(e) => handleComponentRightClick(e, 'or-gate', gate.id)}
+            style={{ cursor: draggedComponent?.id === gate.id ? 'grabbing' : 'grab' }}
+          >
+            <ORGateComponent component={gate} />
+          </g>
+        ))}
+
+        {/* Render NAND gates */}
+        {nandGates.map((gate) => (
+          <g
+            key={gate.id}
+            onMouseDown={(e) => handleComponentMouseDown(e, 'nand-gate', gate.id, gate.position)}
+            onContextMenu={(e) => handleComponentRightClick(e, 'nand-gate', gate.id)}
+            style={{ cursor: draggedComponent?.id === gate.id ? 'grabbing' : 'grab' }}
+          >
+            <NANDGateComponent component={gate} />
+          </g>
+        ))}
+
+        {/* Render NOR gates */}
+        {norGates.map((gate) => (
+          <g
+            key={gate.id}
+            onMouseDown={(e) => handleComponentMouseDown(e, 'nor-gate', gate.id, gate.position)}
+            onContextMenu={(e) => handleComponentRightClick(e, 'nor-gate', gate.id)}
+            style={{ cursor: draggedComponent?.id === gate.id ? 'grabbing' : 'grab' }}
+          >
+            <NORGateComponent component={gate} />
+          </g>
+        ))}
+
+        {/* Render XOR gates */}
+        {xorGates.map((gate) => (
+          <g
+            key={gate.id}
+            onMouseDown={(e) => handleComponentMouseDown(e, 'xor-gate', gate.id, gate.position)}
+            onContextMenu={(e) => handleComponentRightClick(e, 'xor-gate', gate.id)}
+            style={{ cursor: draggedComponent?.id === gate.id ? 'grabbing' : 'grab' }}
+          >
+            <XORGateComponent component={gate} />
+          </g>
+        ))}
+
+        {/* Render XNOR gates */}
+        {xnorGates.map((gate) => (
+          <g
+            key={gate.id}
+            onMouseDown={(e) => handleComponentMouseDown(e, 'xnor-gate', gate.id, gate.position)}
+            onContextMenu={(e) => handleComponentRightClick(e, 'xnor-gate', gate.id)}
+            style={{ cursor: draggedComponent?.id === gate.id ? 'grabbing' : 'grab' }}
+          >
+            <XNORGateComponent component={gate} />
           </g>
         ))}
 
@@ -810,7 +1041,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
           ? `Click on canvas to place ${selectedComponent}`
           : 'Select a component from the palette or click a pin to start wiring'}
         {' | '}
-        Components: {switches.length} switches, {andGates.length} AND gates, {buffers.length} buffers, {inverters.length} inverters, {lights.length} lights, {wires.length} wires
+        Components: {switches.length} switches, {andGates.length + orGates.length + nandGates.length + norGates.length + xorGates.length + xnorGates.length} gates, {buffers.length} buffers, {inverters.length} inverters, {lights.length} lights, {wires.length} wires
       </div>
 
       {/* Gate configuration dialog */}
@@ -830,7 +1061,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
               label: 'Delete',
               onClick: () => handleDeleteComponent(contextMenu.componentType, contextMenu.componentId)
             },
-            ...(contextMenu.componentType === 'and-gate' ? [{
+            ...(['and-gate', 'or-gate', 'nand-gate', 'nor-gate', 'xor-gate', 'xnor-gate'].includes(contextMenu.componentType) ? [{
               label: 'Change Inputs...',
               onClick: () => handleChangeInputs(contextMenu.componentId)
             }] : []),
