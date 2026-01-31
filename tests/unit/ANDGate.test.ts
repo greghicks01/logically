@@ -20,11 +20,11 @@ describe('AND Gate Model', () => {
 
     expect(gate.inputPins[0].position).toEqual({
       x: position.x,
-      y: position.y - 7.5,
+      y: position.y - 20,
     });
     expect(gate.inputPins[1].position).toEqual({
       x: position.x,
-      y: position.y + 7.5,
+      y: position.y - 5,
     });
     expect(gate.outputPin.position).toEqual({
       x: position.x + 60,

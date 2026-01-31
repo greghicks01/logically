@@ -55,7 +55,7 @@ export function createMultiInputGate(
   
   // Create input pins vertically spaced
   const spacing = 15;
-  const totalHeight = (inputs - 1) * spacing;
+  const totalHeight = Math.max(40, (inputs - 1) * spacing + 20);
   const startY = position.y - totalHeight / 2;
   
   for (let i = 0; i < inputs; i++) {

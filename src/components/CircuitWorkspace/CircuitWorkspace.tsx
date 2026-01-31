@@ -361,140 +361,84 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
       };
     };
     
+    // Collect updated gate arrays
+    let updatedSwitches = switches;
+    let updatedAndGates = andGates;
+    let updatedOrGates = orGates;
+    let updatedNandGates = nandGates;
+    let updatedNorGates = norGates;
+    let updatedXorGates = xorGates;
+    let updatedXnorGates = xnorGates;
+    let updatedBuffers = buffers;
+    let updatedInverters = inverters;
+    let updatedLights = lights;
+    
     // Update the appropriate gate array based on pendingGateType
     if (pendingGateType === 'and-gate') {
-      const updatedGates = andGates.map(g => updateGateInputs(g) as ANDGate);
-      setAndGates(updatedGates);
-      // Update wires: remove wires connected to deleted pins, update pin references
-      setWires(wires => wires.filter(wire => {
-        const updatedGate = updatedGates.find(g => g.id === editingGateId);
-        if (!updatedGate) return true;
-        const hasFromPin = updatedGate.inputPins.some(p => p.id === wire.fromPin.id) || updatedGate.outputPin.id === wire.fromPin.id;
-        const hasToPin = updatedGate.inputPins.some(p => p.id === wire.toPin.id) || updatedGate.outputPin.id === wire.toPin.id;
-        return hasFromPin && hasToPin;
-      }).map(wire => {
-        let newFromPin = wire.fromPin;
-        let newToPin = wire.toPin;
-        const updatedGate = updatedGates.find(g => g.id === editingGateId);
-        if (updatedGate) {
-          const fromPin = updatedGate.inputPins.find(p => p.id === wire.fromPin.id) || (updatedGate.outputPin.id === wire.fromPin.id ? updatedGate.outputPin : null);
-          if (fromPin) newFromPin = fromPin;
-          const toPin = updatedGate.inputPins.find(p => p.id === wire.toPin.id) || (updatedGate.outputPin.id === wire.toPin.id ? updatedGate.outputPin : null);
-          if (toPin) newToPin = toPin;
-        }
-        return { ...wire, fromPin: newFromPin, toPin: newToPin };
-      }));
+      updatedAndGates = andGates.map(g => updateGateInputs(g) as ANDGate);
     } else if (pendingGateType === 'or-gate') {
-      const updatedGates = orGates.map(g => updateGateInputs(g) as ORGate);
-      setOrGates(updatedGates);
-      // Update wires: remove wires connected to deleted pins, update pin references
-      setWires(wires => wires.filter(wire => {
-        const updatedGate = updatedGates.find(g => g.id === editingGateId);
-        if (!updatedGate) return true;
-        const hasFromPin = updatedGate.inputPins.some(p => p.id === wire.fromPin.id) || updatedGate.outputPin.id === wire.fromPin.id;
-        const hasToPin = updatedGate.inputPins.some(p => p.id === wire.toPin.id) || updatedGate.outputPin.id === wire.toPin.id;
-        return hasFromPin && hasToPin;
-      }).map(wire => {
-        let newFromPin = wire.fromPin;
-        let newToPin = wire.toPin;
-        const updatedGate = updatedGates.find(g => g.id === editingGateId);
-        if (updatedGate) {
-          const fromPin = updatedGate.inputPins.find(p => p.id === wire.fromPin.id) || (updatedGate.outputPin.id === wire.fromPin.id ? updatedGate.outputPin : null);
-          if (fromPin) newFromPin = fromPin;
-          const toPin = updatedGate.inputPins.find(p => p.id === wire.toPin.id) || (updatedGate.outputPin.id === wire.toPin.id ? updatedGate.outputPin : null);
-          if (toPin) newToPin = toPin;
-        }
-        return { ...wire, fromPin: newFromPin, toPin: newToPin };
-      }));
+      updatedOrGates = orGates.map(g => updateGateInputs(g) as ORGate);
     } else if (pendingGateType === 'nand-gate') {
-      const updatedGates = nandGates.map(g => updateGateInputs(g) as NANDGate);
-      setNandGates(updatedGates);
-      // Update wires: remove wires connected to deleted pins, update pin references
-      setWires(wires => wires.filter(wire => {
-        const updatedGate = updatedGates.find(g => g.id === editingGateId);
-        if (!updatedGate) return true;
-        const hasFromPin = updatedGate.inputPins.some(p => p.id === wire.fromPin.id) || updatedGate.outputPin.id === wire.fromPin.id;
-        const hasToPin = updatedGate.inputPins.some(p => p.id === wire.toPin.id) || updatedGate.outputPin.id === wire.toPin.id;
-        return hasFromPin && hasToPin;
-      }).map(wire => {
-        let newFromPin = wire.fromPin;
-        let newToPin = wire.toPin;
-        const updatedGate = updatedGates.find(g => g.id === editingGateId);
-        if (updatedGate) {
-          const fromPin = updatedGate.inputPins.find(p => p.id === wire.fromPin.id) || (updatedGate.outputPin.id === wire.fromPin.id ? updatedGate.outputPin : null);
-          if (fromPin) newFromPin = fromPin;
-          const toPin = updatedGate.inputPins.find(p => p.id === wire.toPin.id) || (updatedGate.outputPin.id === wire.toPin.id ? updatedGate.outputPin : null);
-          if (toPin) newToPin = toPin;
-        }
-        return { ...wire, fromPin: newFromPin, toPin: newToPin };
-      }));
+      updatedNandGates = nandGates.map(g => updateGateInputs(g) as NANDGate);
     } else if (pendingGateType === 'nor-gate') {
-      const updatedGates = norGates.map(g => updateGateInputs(g) as NORGate);
-      setNorGates(updatedGates);
-      // Update wires: remove wires connected to deleted pins, update pin references
-      setWires(wires => wires.filter(wire => {
-        const updatedGate = updatedGates.find(g => g.id === editingGateId);
-        if (!updatedGate) return true;
-        const hasFromPin = updatedGate.inputPins.some(p => p.id === wire.fromPin.id) || updatedGate.outputPin.id === wire.fromPin.id;
-        const hasToPin = updatedGate.inputPins.some(p => p.id === wire.toPin.id) || updatedGate.outputPin.id === wire.toPin.id;
-        return hasFromPin && hasToPin;
-      }).map(wire => {
-        let newFromPin = wire.fromPin;
-        let newToPin = wire.toPin;
-        const updatedGate = updatedGates.find(g => g.id === editingGateId);
-        if (updatedGate) {
-          const fromPin = updatedGate.inputPins.find(p => p.id === wire.fromPin.id) || (updatedGate.outputPin.id === wire.fromPin.id ? updatedGate.outputPin : null);
-          if (fromPin) newFromPin = fromPin;
-          const toPin = updatedGate.inputPins.find(p => p.id === wire.toPin.id) || (updatedGate.outputPin.id === wire.toPin.id ? updatedGate.outputPin : null);
-          if (toPin) newToPin = toPin;
-        }
-        return { ...wire, fromPin: newFromPin, toPin: newToPin };
-      }));
+      updatedNorGates = norGates.map(g => updateGateInputs(g) as NORGate);
     } else if (pendingGateType === 'xor-gate') {
-      const updatedGates = xorGates.map(g => updateGateInputs(g) as XORGate);
-      setXorGates(updatedGates);
-      // Update wires: remove wires connected to deleted pins, update pin references
-      setWires(wires => wires.filter(wire => {
-        const updatedGate = updatedGates.find(g => g.id === editingGateId);
-        if (!updatedGate) return true;
-        const hasFromPin = updatedGate.inputPins.some(p => p.id === wire.fromPin.id) || updatedGate.outputPin.id === wire.fromPin.id;
-        const hasToPin = updatedGate.inputPins.some(p => p.id === wire.toPin.id) || updatedGate.outputPin.id === wire.toPin.id;
-        return hasFromPin && hasToPin;
-      }).map(wire => {
-        let newFromPin = wire.fromPin;
-        let newToPin = wire.toPin;
-        const updatedGate = updatedGates.find(g => g.id === editingGateId);
-        if (updatedGate) {
-          const fromPin = updatedGate.inputPins.find(p => p.id === wire.fromPin.id) || (updatedGate.outputPin.id === wire.fromPin.id ? updatedGate.outputPin : null);
-          if (fromPin) newFromPin = fromPin;
-          const toPin = updatedGate.inputPins.find(p => p.id === wire.toPin.id) || (updatedGate.outputPin.id === wire.toPin.id ? updatedGate.outputPin : null);
-          if (toPin) newToPin = toPin;
-        }
-        return { ...wire, fromPin: newFromPin, toPin: newToPin };
-      }));
+      updatedXorGates = xorGates.map(g => updateGateInputs(g) as XORGate);
     } else if (pendingGateType === 'xnor-gate') {
-      const updatedGates = xnorGates.map(g => updateGateInputs(g) as XNORGate);
-      setXnorGates(updatedGates);
-      // Update wires: remove wires connected to deleted pins, update pin references
-      setWires(wires => wires.filter(wire => {
-        const updatedGate = updatedGates.find(g => g.id === editingGateId);
-        if (!updatedGate) return true;
-        const hasFromPin = updatedGate.inputPins.some(p => p.id === wire.fromPin.id) || updatedGate.outputPin.id === wire.fromPin.id;
-        const hasToPin = updatedGate.inputPins.some(p => p.id === wire.toPin.id) || updatedGate.outputPin.id === wire.toPin.id;
-        return hasFromPin && hasToPin;
-      }).map(wire => {
-        let newFromPin = wire.fromPin;
-        let newToPin = wire.toPin;
-        const updatedGate = updatedGates.find(g => g.id === editingGateId);
-        if (updatedGate) {
-          const fromPin = updatedGate.inputPins.find(p => p.id === wire.fromPin.id) || (updatedGate.outputPin.id === wire.fromPin.id ? updatedGate.outputPin : null);
-          if (fromPin) newFromPin = fromPin;
-          const toPin = updatedGate.inputPins.find(p => p.id === wire.toPin.id) || (updatedGate.outputPin.id === wire.toPin.id ? updatedGate.outputPin : null);
-          if (toPin) newToPin = toPin;
-        }
-        return { ...wire, fromPin: newFromPin, toPin: newToPin };
-      }));
+      updatedXnorGates = xnorGates.map(g => updateGateInputs(g) as XNORGate);
     }
+    
+    // Update wires: remove wires connected to deleted pins, update pin references
+    const updatedWires = wires.filter(wire => {
+      // Find the updated gate that this wire might be connected to
+      const findUpdatedGate = (gateArrays: any[][]) => {
+        for (const gateArray of gateArrays) {
+          const gate = gateArray.find(g => g.id === editingGateId);
+          if (gate) return gate;
+        }
+        return null;
+      };
+      const updatedGate = findUpdatedGate([updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates]);
+      if (!updatedGate) return true;
+      const hasFromPin = updatedGate.inputPins.some(p => p.id === wire.fromPin.id) || updatedGate.outputPin.id === wire.fromPin.id;
+      const hasToPin = updatedGate.inputPins.some(p => p.id === wire.toPin.id) || updatedGate.outputPin.id === wire.toPin.id;
+      return hasFromPin && hasToPin;
+    }).map(wire => {
+      let newFromPin = wire.fromPin;
+      let newToPin = wire.toPin;
+      // Find the updated gate
+      const findUpdatedGate = (gateArrays: any[][]) => {
+        for (const gateArray of gateArrays) {
+          const gate = gateArray.find(g => g.id === editingGateId);
+          if (gate) return gate;
+        }
+        return null;
+      };
+      const updatedGate = findUpdatedGate([updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates]);
+      if (updatedGate) {
+        const fromPin = updatedGate.inputPins.find(p => p.id === wire.fromPin.id) || (updatedGate.outputPin.id === wire.fromPin.id ? updatedGate.outputPin : null);
+        if (fromPin) newFromPin = fromPin;
+        const toPin = updatedGate.inputPins.find(p => p.id === wire.toPin.id) || (updatedGate.outputPin.id === wire.toPin.id ? updatedGate.outputPin : null);
+        if (toPin) newToPin = toPin;
+      }
+      return { ...wire, fromPin: newFromPin, toPin: newToPin };
+    });
+    
+    // Set all updated states
+    setSwitches(updatedSwitches);
+    setAndGates(updatedAndGates);
+    setOrGates(updatedOrGates);
+    setNandGates(updatedNandGates);
+    setNorGates(updatedNorGates);
+    setXorGates(updatedXorGates);
+    setXnorGates(updatedXnorGates);
+    setBuffers(updatedBuffers);
+    setInverters(updatedInverters);
+    setLights(updatedLights);
+    setWires(updatedWires);
+    
+    // Propagate logic with updated state
+    propagateLogic(updatedSwitches, updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates, updatedBuffers, updatedInverters, updatedLights, updatedWires);
     
     // Reset editing state
     setEditingGateId(null);
@@ -502,9 +446,6 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
     setPendingGateType(null);
     setCurrentGateNumInputs(2);
     setCurrentGateName('');
-    
-    // Propagate logic after change
-    setTimeout(() => propagateLogic(), 10);
   };
 
   // Handle mouse move for wire preview
