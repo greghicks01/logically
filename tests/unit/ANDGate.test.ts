@@ -13,21 +13,33 @@ describe('AND Gate Model', () => {
     expect(gate.inputPins[0].state).toBe(LogicLevel.LOW);
     expect(gate.inputPins[1].state).toBe(LogicLevel.LOW);
     expect(gate.outputPin.state).toBe(LogicLevel.LOW);
+    
+    // Verify parametric properties are initialized
+    expect(gate.boundingBox).toBeDefined();
+    expect(gate.inputPinSpecs).toBeDefined();
+    expect(gate.outputPinSpec).toBeDefined();
   });
 
-  it('should create pins with correct position offsets', () => {
+  it('should create pins with correct parametric positions', () => {
     const gate = createANDGate(id, position);
 
+    // With 2 inputs: pin span = (2-1)*15 = 15px
+    // Parametric: t=0 and t=1 on the pin span
+    // y = center.y - pinSpan/2 + t*pinSpan
+    // For t=0: y = 200 - 7.5 + 0*15 = 192.5
+    // For t=1: y = 200 - 7.5 + 1*15 = 207.5
     expect(gate.inputPins[0].position).toEqual({
-      x: position.x,
-      y: position.y - 20,
+      x: position.x - 30, // center.x - width/2
+      y: 192.5,
     });
     expect(gate.inputPins[1].position).toEqual({
-      x: position.x,
-      y: position.y - 5,
+      x: position.x - 30,
+      y: 207.5,
     });
+    
+    // Output pin at center-right: x = center.x + width/2, y = center
     expect(gate.outputPin.position).toEqual({
-      x: position.x + 60,
+      x: position.x + 30,
       y: position.y,
     });
   });

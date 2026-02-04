@@ -1,9 +1,17 @@
 import { Point } from './Point';
 import { Pin } from './Pin';
 import { LogicLevel } from './LogicLevel';
+import { 
+  createParametricInputPins,
+  calculatePinPosition,
+  calculateGateBoundingBox,
+  BoundingBox,
+  PinSpec
+} from './bases/MultiInputComponent';
 
 /**
  * AND Gate - Multi-input logic gate (2-8 inputs)
+ * Uses parametric pin positioning for automatic adaptation to resizing and future rotation support.
  */
 export interface ANDGate {
   id: string;
@@ -12,29 +20,38 @@ export interface ANDGate {
   outputPin: Pin;
   numInputs: number;
   name?: string;
+  /** Bounding box for parametric calculations */
+  boundingBox: BoundingBox;
+  /** Parametric specifications for pins */
+  inputPinSpecs: PinSpec[];
+  outputPinSpec: PinSpec;
 }
 
 /**
- * Create a new AND gate with configurable number of inputs
+ * Create a new AND gate with configurable number of inputs.
+ * Uses parametric positioning system for pins.
  */
 export function createANDGate(id: string, position: Point, numInputs: number = 2, name?: string): ANDGate {
   // Clamp inputs between 2 and 8
   const inputs = Math.min(Math.max(numInputs, 2), 8);
-  const inputPins: Pin[] = [];
   
-  // Create input pins vertically spaced
-  const spacing = 15;
-  const totalHeight = Math.max(40, (inputs - 1) * spacing + 40);
-  const startY = position.y - totalHeight / 2;
+  // Calculate bounding box
+  const boundingBox = calculateGateBoundingBox(inputs);
   
+  // Create parametric input pins
+  const inputPins = createParametricInputPins(id, position, boundingBox, inputs, 'left', 0);
+  
+  // Create parametric specs (stored for future updates)
+  const inputPinSpecs: PinSpec[] = [];
   for (let i = 0; i < inputs; i++) {
-    inputPins.push({
-      id: `${id}-in${i}`,
-      label: String.fromCharCode(65 + i), // A, B, C, D, E, F, G, H
-      position: { x: position.x, y: startY + i * spacing },
-      state: LogicLevel.LOW,
+    inputPinSpecs.push({
+      edge: 'left',
+      t: inputs === 1 ? 0.5 : i / (inputs - 1),
+      extension: 0
     });
   }
+  
+  const outputPinSpec: PinSpec = { edge: 'right', t: 0.5, extension: 0 };
   
   return {
     id,
@@ -42,10 +59,13 @@ export function createANDGate(id: string, position: Point, numInputs: number = 2
     numInputs: inputs,
     inputPins,
     name,
+    boundingBox,
+    inputPinSpecs,
+    outputPinSpec,
     outputPin: {
       id: `${id}-out`,
       label: 'OUT',
-      position: { x: position.x + 60, y: position.y },
+      position: calculatePinPosition(position, boundingBox, outputPinSpec),
       state: LogicLevel.LOW,
     },
   };

@@ -10,23 +10,23 @@ export interface NORGateComponentProps {
  * Visual representation of a NOR gate
  */
 export const NORGateComponent: React.FC<NORGateComponentProps> = ({ component }) => {
-  const { position, inputPins, outputPin, numInputs, name } = component;
+  const { position, inputPins, outputPin, numInputs, name, boundingBox } = component;
   
-  // Calculate gate dimensions based on number of inputs
-  const gateWidth = 60;
-  const inputSpacing = 15;
-  const totalHeight = Math.max(40, (numInputs - 1) * inputSpacing + 20);
+  // Calculate gate dimensions from bounding box
+  const { width, height } = boundingBox;
+  const leftEdge = position.x - width / 2;
+  const rightEdge = position.x + width / 2;
 
   return (
     <g>
       {/* NOR gate shape (OR shape) */}
       <path
-        d={`M ${position.x} ${position.y - totalHeight/2} 
-            Q ${position.x + 10} ${position.y - totalHeight/2} ${position.x + 15} ${position.y - totalHeight/2 + 5}
-            Q ${position.x + gateWidth - 8} ${position.y - totalHeight/4} ${position.x + gateWidth - 8} ${position.y}
-            Q ${position.x + gateWidth - 8} ${position.y + totalHeight/4} ${position.x + 15} ${position.y + totalHeight/2 - 5}
-            Q ${position.x + 10} ${position.y + totalHeight/2} ${position.x} ${position.y + totalHeight/2}
-            Q ${position.x + 20} ${position.y} ${position.x} ${position.y - totalHeight/2}
+        d={`M ${leftEdge} ${position.y - height/2} 
+            Q ${leftEdge + 10} ${position.y - height/2} ${leftEdge + 15} ${position.y - height/2 + 5}
+            Q ${rightEdge - 8} ${position.y - height/4} ${rightEdge - 8} ${position.y}
+            Q ${rightEdge - 8} ${position.y + height/4} ${leftEdge + 15} ${position.y + height/2 - 5}
+            Q ${leftEdge + 10} ${position.y + height/2} ${leftEdge} ${position.y + height/2}
+            Q ${leftEdge + 20} ${position.y} ${leftEdge} ${position.y - height/2}
             Z`}
         fill="#FCE4EC"
         stroke="#333"
@@ -35,7 +35,7 @@ export const NORGateComponent: React.FC<NORGateComponentProps> = ({ component })
       
       {/* Inversion bubble */}
       <circle
-        cx={position.x + gateWidth - 2}
+        cx={rightEdge - 2}
         cy={position.y}
         r={6}
         fill="#FCE4EC"
@@ -45,7 +45,7 @@ export const NORGateComponent: React.FC<NORGateComponentProps> = ({ component })
       
       {/* Label */}
       <text
-        x={position.x + gateWidth / 2 - 3}
+        x={position.x - 3}
         y={position.y}
         textAnchor="middle"
         dominantBaseline="middle"

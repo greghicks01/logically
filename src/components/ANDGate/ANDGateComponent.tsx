@@ -8,24 +8,28 @@ export interface ANDGateComponentProps {
 
 /**
  * Visual representation of an AND gate
+ * Uses parametric bounding box for consistent rendering
  */
 export const ANDGateComponent: React.FC<ANDGateComponentProps> = ({ component }) => {
-  const { position, inputPins, outputPin, numInputs, name } = component;
+  const { position, inputPins, outputPin, boundingBox, name } = component;
   
-  // Calculate gate dimensions based on number of inputs
-  const gateWidth = 60;
-  const inputSpacing = 15;
-  const totalHeight = Math.max(40, (numInputs - 1) * inputSpacing + 20);
+  // Use bounding box dimensions directly
+  const gateWidth = boundingBox.width;
+  const totalHeight = boundingBox.height;
+  
+  // Calculate gate left edge from center and bounding box
+  const leftEdge = position.x - gateWidth / 2;
+  const rightEdge = position.x + gateWidth / 2;
 
   return (
     <g>
-      {/* AND gate shape */}
+      {/* AND gate shape - drawn from bounding box */}
       <path
-        d={`M ${position.x} ${position.y - totalHeight/2} 
-            L ${position.x + gateWidth/2} ${position.y - totalHeight/2}
-            Q ${position.x + gateWidth} ${position.y - totalHeight/2} ${position.x + gateWidth} ${position.y}
-            Q ${position.x + gateWidth} ${position.y + totalHeight/2} ${position.x + gateWidth/2} ${position.y + totalHeight/2}
-            L ${position.x} ${position.y + totalHeight/2}
+        d={`M ${leftEdge} ${position.y - totalHeight/2} 
+            L ${leftEdge + gateWidth/2} ${position.y - totalHeight/2}
+            Q ${rightEdge} ${position.y - totalHeight/2} ${rightEdge} ${position.y}
+            Q ${rightEdge} ${position.y + totalHeight/2} ${leftEdge + gateWidth/2} ${position.y + totalHeight/2}
+            L ${leftEdge} ${position.y + totalHeight/2}
             Z`}
         fill="#E3F2FD"
         stroke="#333"

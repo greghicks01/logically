@@ -331,34 +331,37 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
     const updateGateInputs = (g: any) => {
       if (!g || g.id !== editingGateId) return g;
       
-      const inputSpacing = 15;
-      const totalHeight = Math.max(40, (numInputs - 1) * inputSpacing + 20);
-      const startY = g.position.y - totalHeight / 2;
+      // Recreate the gate using its factory function with parametric positioning
+      const position = g.position;
+      const name = config.name || g.name;
       
-      // Create new input pins
-      const newInputPins: Pin[] = [];
-      for (let i = 0; i < numInputs; i++) {
-        // Try to preserve existing pin states
-        const existingPin = g.inputPins[i];
-        newInputPins.push({
-          id: existingPin?.id || `${g.id}-in${i}`,
-          label: String.fromCharCode(65 + i),
-          position: { x: g.position.x, y: startY + i * inputSpacing },
-          state: existingPin?.state || LogicLevel.LOW,
-        });
+      // Preserve existing pin states
+      const preservedStates = g.inputPins.map((pin: Pin) => pin.state);
+      
+      // Recreate gate based on type
+      let newGate;
+      if (g.id.includes('and') && !g.id.includes('nand')) {
+        newGate = createANDGate(g.id, position, numInputs, name);
+      } else if (g.id.includes('or') && !g.id.includes('nor') && !g.id.includes('xor')) {
+        newGate = createORGate(g.id, position, numInputs, name);
+      } else if (g.id.includes('nand')) {
+        newGate = createNANDGate(g.id, position, numInputs, name);
+      } else if (g.id.includes('nor')) {
+        newGate = createNORGate(g.id, position, numInputs, name);
+      } else if (g.id.includes('xor') && !g.id.includes('xnor')) {
+        newGate = createXORGate(g.id, position, numInputs, name);
+      } else if (g.id.includes('xnor')) {
+        newGate = createXNORGate(g.id, position, numInputs, name);
+      } else {
+        return g; // Unknown type, return unchanged
       }
       
-      // Calculate output offset based on gate type (inverted gates have bubbles)
-      const isInverted = g.id.includes('nand') || g.id.includes('nor') || g.id.includes('xnor');
-      const outputOffsetX = isInverted ? 64 : 60;
+      // Restore preserved pin states
+      for (let i = 0; i < Math.min(preservedStates.length, newGate.inputPins.length); i++) {
+        newGate.inputPins[i].state = preservedStates[i];
+      }
       
-      return {
-        ...g,
-        numInputs,
-        name: config.name,
-        inputPins: newInputPins,
-        outputPin: { ...g.outputPin, position: { x: g.position.x + outputOffsetX, y: g.position.y } }
-      };
+      return newGate;
     };
     
     // Collect updated gate arrays

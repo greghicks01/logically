@@ -8,25 +8,29 @@ export interface ORGateComponentProps {
 
 /**
  * Visual representation of an OR gate
+ * Uses parametric bounding box for consistent rendering
  */
 export const ORGateComponent: React.FC<ORGateComponentProps> = ({ component }) => {
-  const { position, inputPins, outputPin, numInputs, name } = component;
+  const { position, inputPins, outputPin, boundingBox, name } = component;
   
-  // Calculate gate dimensions based on number of inputs
-  const gateWidth = 60;
-  const inputSpacing = 15;
-  const totalHeight = Math.max(40, (numInputs - 1) * inputSpacing + 20);
+  // Use bounding box dimensions directly
+  const gateWidth = boundingBox.width;
+  const totalHeight = boundingBox.height;
+  
+  // Calculate gate left edge from center and bounding box
+  const leftEdge = position.x - gateWidth / 2;
+  const rightEdge = position.x + gateWidth / 2;
 
   return (
     <g>
-      {/* OR gate shape */}
+      {/* OR gate shape - drawn from bounding box */}
       <path
-        d={`M ${position.x} ${position.y - totalHeight/2} 
-            Q ${position.x + 10} ${position.y - totalHeight/2} ${position.x + 15} ${position.y - totalHeight/2 + 5}
-            Q ${position.x + gateWidth} ${position.y - totalHeight/4} ${position.x + gateWidth} ${position.y}
-            Q ${position.x + gateWidth} ${position.y + totalHeight/4} ${position.x + 15} ${position.y + totalHeight/2 - 5}
-            Q ${position.x + 10} ${position.y + totalHeight/2} ${position.x} ${position.y + totalHeight/2}
-            Q ${position.x + 20} ${position.y} ${position.x} ${position.y - totalHeight/2}
+        d={`M ${leftEdge} ${position.y - totalHeight/2} 
+            Q ${leftEdge + 10} ${position.y - totalHeight/2} ${leftEdge + 15} ${position.y - totalHeight/2 + 5}
+            Q ${rightEdge} ${position.y - totalHeight/4} ${rightEdge} ${position.y}
+            Q ${rightEdge} ${position.y + totalHeight/4} ${leftEdge + 15} ${position.y + totalHeight/2 - 5}
+            Q ${leftEdge + 10} ${position.y + totalHeight/2} ${leftEdge} ${position.y + totalHeight/2}
+            Q ${leftEdge + 20} ${position.y} ${leftEdge} ${position.y - totalHeight/2}
             Z`}
         fill="#FFF3E0"
         stroke="#333"

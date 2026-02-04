@@ -10,23 +10,23 @@ export interface XNORGateComponentProps {
  * Visual representation of an XNOR gate
  */
 export const XNORGateComponent: React.FC<XNORGateComponentProps> = ({ component }) => {
-  const { position, inputPins, outputPin, numInputs, name } = component;
+  const { position, inputPins, outputPin, numInputs, name, boundingBox } = component;
   
-  // Calculate gate dimensions based on number of inputs
-  const gateWidth = 60;
-  const inputSpacing = 15;
-  const totalHeight = Math.max(40, (numInputs - 1) * inputSpacing + 20);
+  // Calculate gate dimensions from bounding box
+  const { width, height } = boundingBox;
+  const leftEdge = position.x - width / 2;
+  const rightEdge = position.x + width / 2;
 
   return (
     <g>
       {/* XNOR gate shape (XOR shape with inversion bubble) */}
       <path
-        d={`M ${position.x + 5} ${position.y - totalHeight/2} 
-            Q ${position.x + 15} ${position.y - totalHeight/2} ${position.x + 20} ${position.y - totalHeight/2 + 5}
-            Q ${position.x + gateWidth - 8} ${position.y - totalHeight/4} ${position.x + gateWidth - 8} ${position.y}
-            Q ${position.x + gateWidth - 8} ${position.y + totalHeight/4} ${position.x + 20} ${position.y + totalHeight/2 - 5}
-            Q ${position.x + 15} ${position.y + totalHeight/2} ${position.x + 5} ${position.y + totalHeight/2}
-            Q ${position.x + 25} ${position.y} ${position.x + 5} ${position.y - totalHeight/2}
+        d={`M ${leftEdge + 5} ${position.y - height/2} 
+            Q ${leftEdge + 15} ${position.y - height/2} ${leftEdge + 20} ${position.y - height/2 + 5}
+            Q ${rightEdge - 8} ${position.y - height/4} ${rightEdge - 8} ${position.y}
+            Q ${rightEdge - 8} ${position.y + height/4} ${leftEdge + 20} ${position.y + height/2 - 5}
+            Q ${leftEdge + 15} ${position.y + height/2} ${leftEdge + 5} ${position.y + height/2}
+            Q ${leftEdge + 25} ${position.y} ${leftEdge + 5} ${position.y - height/2}
             Z`}
         fill="#E1F5FE"
         stroke="#333"
@@ -35,8 +35,8 @@ export const XNORGateComponent: React.FC<XNORGateComponentProps> = ({ component 
       
       {/* Extra input curve for XOR base */}
       <path
-        d={`M ${position.x} ${position.y - totalHeight/2}
-            Q ${position.x + 20} ${position.y} ${position.x} ${position.y + totalHeight/2}`}
+        d={`M ${leftEdge} ${position.y - height/2}
+            Q ${leftEdge + 20} ${position.y} ${leftEdge} ${position.y + height/2}`}
         fill="none"
         stroke="#333"
         strokeWidth="2"
@@ -44,7 +44,7 @@ export const XNORGateComponent: React.FC<XNORGateComponentProps> = ({ component 
       
       {/* Inversion bubble */}
       <circle
-        cx={position.x + gateWidth - 2}
+        cx={rightEdge - 2}
         cy={position.y}
         r={6}
         fill="#E1F5FE"
@@ -54,7 +54,7 @@ export const XNORGateComponent: React.FC<XNORGateComponentProps> = ({ component 
       
       {/* Label */}
       <text
-        x={position.x + gateWidth / 2 - 1}
+        x={position.x - 1}
         y={position.y}
         textAnchor="middle"
         dominantBaseline="middle"

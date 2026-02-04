@@ -1,6 +1,7 @@
 import { Point } from './Point';
 import { Pin } from './Pin';
 import { LogicLevel } from './LogicLevel';
+import { createInputPinsAtPosition } from './bases/MultiInputComponent';
 
 /**
  * Base interface for all multi-input logic gates
@@ -51,21 +52,7 @@ export function createMultiInputGate(
   
   // Clamp inputs between 2 and 8
   const inputs = Math.min(Math.max(numInputs, 2), 8);
-  const inputPins: Pin[] = [];
-  
-  // Create input pins vertically spaced
-  const spacing = 15;
-  const totalHeight = Math.max(40, (inputs - 1) * spacing + 20);
-  const startY = position.y - totalHeight / 2;
-  
-  for (let i = 0; i < inputs; i++) {
-    inputPins.push({
-      id: `${id}-in${i}`,
-      label: String.fromCharCode(65 + i), // A, B, C, D, E, F, G, H
-      position: { x: position.x, y: startY + i * spacing },
-      state: LogicLevel.LOW,
-    });
-  }
+  const inputPins = createInputPinsAtPosition(id, position, inputs);
   
   return {
     id,

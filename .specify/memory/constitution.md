@@ -1,50 +1,117 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Logically Circuit Simulator Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Mathematical Foundation First
+Every visual or interactive feature must have a well-defined mathematical model before implementation. The mathematics guide the code, not vice versa.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+**Requirements:**
+- Express behavior as equations (linear, parametric, or transformational)
+- Document the mathematical model in code comments with formulas
+- Identify invariants and constraints mathematically
+- Validate edge cases through mathematical reasoning
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Rationale:** The parametric pin positioning work revealed that unclear mathematics led to visual bugs. Starting with t ∈ [0,1] parametric coordinates prevented position calculation errors.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. Separation of Logical and Physical Concerns
+Separate what something *is* (logical specification) from where/how it *appears* (physical rendering).
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+**Requirements:**
+- Logical models store parametric specifications (edge, t, extension)
+- Physical positions calculated on-demand from specs + context
+- Never hardcode absolute positions in model layer
+- Rendering components receive bounding boxes, not calculate them
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+**Rationale:** Mixing logical (pin identity) with physical (x,y coordinates) created coupling. Moving pins required touching multiple files. Parametric specs eliminated this.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### III. Test Mathematical Functions, Not Just Features
+Core mathematical utilities require comprehensive unit testing separate from integration tests.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Requirements:**
+- Test mathematical functions in isolation (positioning, distribution, transformations)
+- Verify edge cases (zero dimensions, single element, boundary values)
+- Test numerical precision with `toBeCloseTo()` for floating point
+- Integration tests verify composed behavior
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+**Rationale:** 65 parametric positioning tests caught precision issues and edge cases before UI integration, saving debugging time.
+
+### IV. Single Source of Truth
+Each behavior, calculation, or data structure must have exactly one authoritative definition.
+
+**Requirements:**
+- Duplicate logic is a critical defect
+- Shared calculations belong in reusable functions
+- Document which file/function is authoritative for each concern
+- Reference the source of truth, never copy-paste
+
+**Rationale:** Seven gate files had duplicate pin positioning logic. Consolidating to one function eliminated inconsistencies and simplified changes.
+
+### V. Backward Compatibility During Migration
+New systems must coexist with old ones during transition. Break changes deliberately, never accidentally.
+
+**Requirements:**
+- Keep old APIs functional during migration
+- Add new APIs alongside, don't replace immediately
+- Migrate one component at a time with validation
+- Document migration path and deprecation timeline
+
+**Rationale:** Preserving `createInputPinsAtPosition()` while adding parametric functions allowed gradual migration. AND gate migration validated the approach before touching other gates.
+
+## Development Workflow
+
+### Design Phase
+1. **Express the problem mathematically** - write equations before code
+2. **Identify invariants** - what must always be true?
+3. **Document edge cases** - zero, one, max, negative values
+4. **Design types/interfaces** - capture the mathematical model
+
+### Implementation Phase
+1. **Create mathematical utilities first** - pure functions, well-tested
+2. **Unit test exhaustively** - all edge cases, numerical precision
+3. **Build higher-level abstractions** - compose tested utilities
+4. **Integration test real scenarios** - user interactions, state changes
+
+### Migration Phase
+1. **Implement new system alongside old** - no breaking changes yet
+2. **Migrate one component as proof** - validate approach
+3. **Test migrated component thoroughly** - ensure parity
+4. **Migrate remaining components** - apply lessons learned
+5. **Deprecate old system** - after full migration validated
+
+## Quality Standards
+
+### Code Documentation
+- Mathematical formulas in comments with variable definitions
+- Example calculations showing expected values
+- References to external concepts (e.g., parametric equations)
+- Rationale for non-obvious design decisions
+
+### Testing Coverage
+- All mathematical utility functions: 100% coverage
+- Edge cases explicitly tested and documented
+- Integration tests for user-visible behavior
+- Test descriptions explain what's being verified
+
+### Type Safety
+- Interfaces capture logical structure, not just shape
+- Separate types for specifications vs. computed values
+- Use branded types for units (PinSpec vs Point)
+- Avoid `any` - specify types explicitly
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes all other development practices. Principles are non-negotiable; implementations may evolve.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Amendment Process:**
+1. Identify principle violation or gap
+2. Propose amendment with rationale
+3. Update version following semantic versioning
+4. Propagate changes to dependent documents
+
+**Compliance:**
+- All PRs must align with these principles
+- Mathematical models documented before implementation
+- Testing requirements enforced in CI/CD
+- Architecture reviews verify separation of concerns
+
+**Version**: 1.0.0 | **Ratified**: 2026-02-04 | **Last Amended**: 2026-02-04

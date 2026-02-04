@@ -10,23 +10,23 @@ export interface XORGateComponentProps {
  * Visual representation of an XOR gate
  */
 export const XORGateComponent: React.FC<XORGateComponentProps> = ({ component }) => {
-  const { position, inputPins, outputPin, numInputs, name } = component;
+  const { position, inputPins, outputPin, numInputs, name, boundingBox } = component;
   
-  // Calculate gate dimensions based on number of inputs
-  const gateWidth = 60;
-  const inputSpacing = 15;
-  const totalHeight = Math.max(40, (numInputs - 1) * inputSpacing + 20);
+  // Calculate gate dimensions from bounding box
+  const { width, height } = boundingBox;
+  const leftEdge = position.x - width / 2;
+  const rightEdge = position.x + width / 2;
 
   return (
     <g>
       {/* XOR gate shape (OR shape with extra input line) */}
       <path
-        d={`M ${position.x + 5} ${position.y - totalHeight/2} 
-            Q ${position.x + 15} ${position.y - totalHeight/2} ${position.x + 20} ${position.y - totalHeight/2 + 5}
-            Q ${position.x + gateWidth} ${position.y - totalHeight/4} ${position.x + gateWidth} ${position.y}
-            Q ${position.x + gateWidth} ${position.y + totalHeight/4} ${position.x + 20} ${position.y + totalHeight/2 - 5}
-            Q ${position.x + 15} ${position.y + totalHeight/2} ${position.x + 5} ${position.y + totalHeight/2}
-            Q ${position.x + 25} ${position.y} ${position.x + 5} ${position.y - totalHeight/2}
+        d={`M ${leftEdge + 5} ${position.y - height/2} 
+            Q ${leftEdge + 15} ${position.y - height/2} ${leftEdge + 20} ${position.y - height/2 + 5}
+            Q ${rightEdge} ${position.y - height/4} ${rightEdge} ${position.y}
+            Q ${rightEdge} ${position.y + height/4} ${leftEdge + 20} ${position.y + height/2 - 5}
+            Q ${leftEdge + 15} ${position.y + height/2} ${leftEdge + 5} ${position.y + height/2}
+            Q ${leftEdge + 25} ${position.y} ${leftEdge + 5} ${position.y - height/2}
             Z`}
         fill="#F3E5F5"
         stroke="#333"
@@ -35,8 +35,8 @@ export const XORGateComponent: React.FC<XORGateComponentProps> = ({ component })
       
       {/* Extra input curve for XOR */}
       <path
-        d={`M ${position.x} ${position.y - totalHeight/2}
-            Q ${position.x + 20} ${position.y} ${position.x} ${position.y + totalHeight/2}`}
+        d={`M ${leftEdge} ${position.y - height/2}
+            Q ${leftEdge + 20} ${position.y} ${leftEdge} ${position.y + height/2}`}
         fill="none"
         stroke="#333"
         strokeWidth="2"
@@ -44,7 +44,7 @@ export const XORGateComponent: React.FC<XORGateComponentProps> = ({ component })
       
       {/* Label */}
       <text
-        x={position.x + gateWidth / 2 + 2}
+        x={position.x + 2}
         y={position.y}
         textAnchor="middle"
         dominantBaseline="middle"

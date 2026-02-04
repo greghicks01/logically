@@ -8,24 +8,29 @@ export interface NANDGateComponentProps {
 
 /**
  * Visual representation of a NAND gate
+ * Uses parametric bounding box for consistent rendering
  */
 export const NANDGateComponent: React.FC<NANDGateComponentProps> = ({ component }) => {
-  const { position, inputPins, outputPin, numInputs, name } = component;
+  const { position, inputPins, outputPin, boundingBox, name } = component;
   
-  // Calculate gate dimensions based on number of inputs
-  const gateWidth = 60;
-  const inputSpacing = 15;
-  const totalHeight = Math.max(40, (numInputs - 1) * inputSpacing + 20);
+  // Use bounding box dimensions directly
+  const gateWidth = boundingBox.width;
+  const totalHeight = boundingBox.height;
+  
+  // Calculate gate edges from center and bounding box
+  const leftEdge = position.x - gateWidth / 2;
+  const rightEdge = position.x + gateWidth / 2;
+  const bubbleRadius = 6;
 
   return (
     <g>
-      {/* NAND gate shape (AND shape) */}
+      {/* NAND gate shape (AND shape) - drawn from bounding box */}
       <path
-        d={`M ${position.x} ${position.y - totalHeight/2} 
-            L ${position.x + (gateWidth - 8)/2} ${position.y - totalHeight/2}
-            Q ${position.x + gateWidth - 8} ${position.y - totalHeight/2} ${position.x + gateWidth - 8} ${position.y}
-            Q ${position.x + gateWidth - 8} ${position.y + totalHeight/2} ${position.x + (gateWidth - 8)/2} ${position.y + totalHeight/2}
-            L ${position.x} ${position.y + totalHeight/2}
+        d={`M ${leftEdge} ${position.y - totalHeight/2} 
+            L ${leftEdge + (gateWidth - 8)/2} ${position.y - totalHeight/2}
+            Q ${rightEdge - 8} ${position.y - totalHeight/2} ${rightEdge - 8} ${position.y}
+            Q ${rightEdge - 8} ${position.y + totalHeight/2} ${leftEdge + (gateWidth - 8)/2} ${position.y + totalHeight/2}
+            L ${leftEdge} ${position.y + totalHeight/2}
             Z`}
         fill="#E8F5E9"
         stroke="#333"
@@ -34,9 +39,9 @@ export const NANDGateComponent: React.FC<NANDGateComponentProps> = ({ component 
       
       {/* Inversion bubble */}
       <circle
-        cx={position.x + gateWidth - 2}
+        cx={rightEdge - 2}
         cy={position.y}
-        r={6}
+        r={bubbleRadius}
         fill="#E8F5E9"
         stroke="#333"
         strokeWidth="2"
