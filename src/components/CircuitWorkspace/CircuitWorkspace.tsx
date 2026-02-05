@@ -277,6 +277,15 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
     }));
   };
 
+  // Handle delete wire
+  const handleDeleteWire = (wireId: string) => {
+    setWires(wires.filter(wire => wire.id !== wireId));
+    setContextMenu(null);
+    
+    // Repropagate logic after wire deletion
+    propagateLogic(switches, andGates, orGates, nandGates, norGates, xorGates, xnorGates, buffers, inverters, lights, wires.filter(wire => wire.id !== wireId));
+  };
+
   // Handle rotate component (90 degrees clockwise)
   const handleRotateComponent = (componentType: string, componentId: string) => {
     // Rotation could be implemented by tracking rotation state
@@ -1002,7 +1011,11 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
 
         {/* Render wires */}
         {wires.map((wire) => (
-          <WireComponent key={wire.id} wire={wire} />
+          <WireComponent 
+            key={wire.id} 
+            wire={wire}
+            onContextMenu={(e, wireId) => handleComponentRightClick(e, 'wire', wireId)}
+          />
         ))}
 
         {/* Render switches */}
@@ -1187,6 +1200,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
         gateType={pendingGateType || undefined}
         initialNumInputs={editingGateId ? currentGateNumInputs : 2}
         initialName={editingGateId ? currentGateName : ''}
+        isEditing={!!editingGateId}
         onConfirm={handleGateConfigConfirm}
         onCancel={handleGateConfigCancel}
       />
@@ -1196,27 +1210,34 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          options={[
-            {
-              label: 'Delete',
-              onClick: () => handleDeleteComponent(contextMenu.componentType, contextMenu.componentId)
-            },
-            ...(['and-gate', 'or-gate', 'nand-gate', 'nor-gate', 'xor-gate', 'xnor-gate'].includes(contextMenu.componentType) ? [{
-              label: 'Change Inputs...',
-              onClick: () => handleChangeInputs(contextMenu.componentId)
-            }] : []),
-            {
-              label: 'Duplicate',
-              onClick: () => console.log('Duplicate not yet implemented'),
-              disabled: true
-            },
-            { separator: true },
-            {
-              label: 'Rotate 90°',
-              onClick: () => handleRotateComponent(contextMenu.componentType, contextMenu.componentId),
-              disabled: true
-            }
-          ]}
+          options={
+            contextMenu.componentType === 'wire' ? [
+              {
+                label: 'Delete Wire',
+                onClick: () => handleDeleteWire(contextMenu.componentId)
+              }
+            ] : [
+              {
+                label: 'Delete',
+                onClick: () => handleDeleteComponent(contextMenu.componentType, contextMenu.componentId)
+              },
+              ...(['and-gate', 'or-gate', 'nand-gate', 'nor-gate', 'xor-gate', 'xnor-gate'].includes(contextMenu.componentType) ? [{
+                label: 'Change Inputs...',
+                onClick: () => handleChangeInputs(contextMenu.componentId)
+              }] : []),
+              {
+                label: 'Duplicate',
+                onClick: () => console.log('Duplicate not yet implemented'),
+                disabled: true
+              },
+              { separator: true },
+              {
+                label: 'Rotate 90°',
+                onClick: () => handleRotateComponent(contextMenu.componentType, contextMenu.componentId),
+                disabled: true
+              }
+            ]
+          }
           onClose={() => setContextMenu(null)}
         />
       )}

@@ -6,12 +6,13 @@ import { getWireColor } from '../../lib/colorSchemes';
 
 export interface WireComponentProps {
   wire: Wire;
+  onContextMenu?: (event: React.MouseEvent, wireId: string) => void;
 }
 
 /**
  * Wire component for rendering and updating wire state
  */
-export function WireComponent({ wire }: WireComponentProps) {
+export function WireComponent({ wire, onContextMenu }: WireComponentProps) {
   const { updateWireState } = useSimulation();
   const [isHovered, setIsHovered] = useState(false);
 
@@ -28,6 +29,14 @@ export function WireComponent({ wire }: WireComponentProps) {
     // For testing: toggle wire state on click
     const newState = wire.logicLevel === LogicLevel.LOW ? LogicLevel.HIGH : LogicLevel.LOW;
     updateWireState(wire.id, newState);
+  };
+
+  const handleContextMenu = (event: React.MouseEvent) => {
+    if (onContextMenu) {
+      event.preventDefault();
+      event.stopPropagation();
+      onContextMenu(event, wire.id);
+    }
   };
 
   // Generate organic curved path
@@ -51,6 +60,7 @@ export function WireComponent({ wire }: WireComponentProps) {
     <g
       data-wire-id={wire.id}
       onClick={handleClick}
+      onContextMenu={handleContextMenu}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{ cursor: 'pointer' }}

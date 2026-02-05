@@ -6,6 +6,7 @@ export interface GateConfigDialogProps {
   gateType?: string;
   initialNumInputs?: number;
   initialName?: string;
+  isEditing?: boolean;
   onConfirm: (config: { numInputs: number; name?: string }) => void;
   onCancel: () => void;
 }
@@ -15,6 +16,7 @@ export const GateConfigDialog: React.FC<GateConfigDialogProps> = ({
   gateType, 
   initialNumInputs = 2,
   initialName = '',
+  isEditing = false,
   onConfirm, 
   onCancel 
 }) => {
@@ -49,9 +51,16 @@ export const GateConfigDialog: React.FC<GateConfigDialogProps> = ({
     setName('');
   };
 
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    // Only close if clicking directly on the overlay, not on dialog content
+    if (e.target === e.currentTarget) {
+      handleCancel();
+    }
+  };
+
   return (
-    <div className="gate-config-overlay" onClick={handleCancel}>
-      <div className="gate-config-dialog" onClick={(e) => e.stopPropagation()}>
+    <div className="gate-config-overlay" onClick={handleOverlayClick}>
+      <div className="gate-config-dialog">
         <h2>Configure {gateType ? gateType.toUpperCase() : 'Gate'}</h2>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -85,7 +94,7 @@ export const GateConfigDialog: React.FC<GateConfigDialogProps> = ({
 
           <div className="dialog-buttons">
             <button type="submit" className="btn-primary">
-              Create Gate
+              {isEditing ? 'Update Gate' : 'Create Gate'}
             </button>
             <button type="button" onClick={handleCancel} className="btn-secondary">
               Cancel
