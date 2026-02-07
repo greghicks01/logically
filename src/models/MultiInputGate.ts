@@ -1,7 +1,7 @@
 import { Point } from './Point';
 import { Pin } from './Pin';
 import { LogicLevel } from './LogicLevel';
-import { createInputPinsAtPosition } from './bases/MultiInputComponent';
+import { createParametricInputPins, calculateGateBoundingBox, calculatePinPosition } from './bases/MultiInputComponent';
 
 /**
  * Base interface for all multi-input logic gates
@@ -30,12 +30,12 @@ export interface GateConfig {
  * Gate type configurations
  */
 export const GATE_CONFIGS: Record<string, GateConfig> = {
-  'and': { type: 'and', hasInversionBubble: false, defaultOutputState: LogicLevel.LOW, outputOffsetX: 60 },
-  'or': { type: 'or', hasInversionBubble: false, defaultOutputState: LogicLevel.LOW, outputOffsetX: 60 },
-  'nand': { type: 'nand', hasInversionBubble: true, defaultOutputState: LogicLevel.HIGH, outputOffsetX: 64 },
-  'nor': { type: 'nor', hasInversionBubble: true, defaultOutputState: LogicLevel.HIGH, outputOffsetX: 64 },
-  'xor': { type: 'xor', hasInversionBubble: false, defaultOutputState: LogicLevel.LOW, outputOffsetX: 60 },
-  'xnor': { type: 'xnor', hasInversionBubble: true, defaultOutputState: LogicLevel.HIGH, outputOffsetX: 64 },
+  'and': { type: 'and', hasInversionBubble: false, defaultOutputState: LogicLevel.LOW, outputOffsetX: 0 },
+  'or': { type: 'or', hasInversionBubble: false, defaultOutputState: LogicLevel.LOW, outputOffsetX: 0 },
+  'nand': { type: 'nand', hasInversionBubble: true, defaultOutputState: LogicLevel.HIGH, outputOffsetX: 4 },
+  'nor': { type: 'nor', hasInversionBubble: true, defaultOutputState: LogicLevel.HIGH, outputOffsetX: 4 },
+  'xor': { type: 'xor', hasInversionBubble: false, defaultOutputState: LogicLevel.LOW, outputOffsetX: 0 },
+  'xnor': { type: 'xnor', hasInversionBubble: true, defaultOutputState: LogicLevel.HIGH, outputOffsetX: 4 },
 };
 
 /**
@@ -52,7 +52,20 @@ export function createMultiInputGate(
   
   // Clamp inputs between 2 and 8
   const inputs = Math.min(Math.max(numInputs, 2), 8);
-  const inputPins = createInputPinsAtPosition(id, position, inputs);
+  
+  // Calculate bounding box for parametric positioning
+  const boundingBox = calculateGateBoundingBox(inputs);
+  
+  // Use parametric positioning system for input pins
+  const inputPins = createParametricInputPins(id, position, boundingBox, inputs, 'left', 0);
+  
+  // Use parametric positioning for output pin
+  // For inverted gates (NAND, NOR, XNOR), extension is 4px for the bubble
+  const outputPos = calculatePinPosition(
+    position,
+    boundingBox,
+    { edge: 'right', t: 0.5, extension: config.outputOffsetX }
+  );
   
   return {
     id,
@@ -64,7 +77,7 @@ export function createMultiInputGate(
     outputPin: {
       id: `${id}-out`,
       label: 'OUT',
-      position: { x: position.x + config.outputOffsetX, y: position.y },
+      position: outputPos,
       state: config.defaultOutputState,
     },
   };

@@ -1,5 +1,16 @@
 import { LogicLevel } from './LogicLevel';
+import { Point } from './Point';
 import { PinConnection } from './PinConnection';
+
+/**
+ * Pin interface - used by gates and components
+ */
+export interface Pin {
+  id: string;
+  label?: string;
+  position: Point;
+  state: LogicLevel;
+}
 
 /**
  * Output pin interface

@@ -1,5 +1,6 @@
 import { LogicLevel } from './LogicLevel';
 import { Point } from './Point';
+import { Pin } from './Pin';
 import { PinConnection } from './PinConnection';
 
 /**
@@ -17,8 +18,8 @@ export interface PushButton {
   position: Point;
   /** Visual size */
   size: { width: number; height: number };
-  /** Output connection */
-  outputPin: PinConnection;
+  /** Output pin */
+  outputPin: Pin;
 }
 
 /**
@@ -27,8 +28,7 @@ export interface PushButton {
 export function createPushButton(
   id: string,
   type: 'toggle' | 'momentary',
-  position: Point,
-  outputPin: PinConnection
+  position: Point
 ): PushButton {
   return {
     id,
@@ -37,7 +37,64 @@ export function createPushButton(
     outputValue: LogicLevel.LOW,
     position,
     size: { width: 40, height: 40 },
-    outputPin,
+    outputPin: {
+      id: `${id}-out`,
+      label: 'OUT',
+      position: { x: position.x + 50, y: position.y + 20 },
+      state: LogicLevel.LOW,
+    },
+  };
+}
+
+/**
+ * Press a push button - activates and sets output to HIGH
+ */
+export function pressPushButton(button: PushButton): PushButton {
+  return {
+    ...button,
+    state: 'pressed',
+    outputValue: LogicLevel.HIGH,
+    outputPin: {
+      ...button.outputPin,
+      state: LogicLevel.HIGH,
+    },
+  };
+}
+
+/**
+ * Release a push button - deactivates and sets output to LOW
+ */
+export function releasePushButton(button: PushButton): PushButton {
+  return {
+    ...button,
+    state: 'released',
+    outputValue: LogicLevel.LOW,
+    outputPin: {
+      ...button.outputPin,
+      state: LogicLevel.LOW,
+    },
+  };
+}
+
+/**
+ * Toggle a push button (for toggle-type buttons)
+ */
+export function togglePushButton(button: PushButton): PushButton {
+  if (button.type !== 'toggle') {
+    return button;
+  }
+  
+  const newState = button.state === 'pressed' ? 'released' : 'pressed';
+  const newOutputValue = newState === 'pressed' ? LogicLevel.HIGH : LogicLevel.LOW;
+  
+  return {
+    ...button,
+    state: newState,
+    outputValue: newOutputValue,
+    outputPin: {
+      ...button.outputPin,
+      state: newOutputValue,
+    },
   };
 }
 

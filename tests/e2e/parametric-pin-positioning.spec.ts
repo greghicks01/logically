@@ -1,289 +1,192 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page, Locator } from '@playwright/test';
 
-/**
- * E2E tests for parametric pin positioning system
- * 
- * These tests verify the visual correctness and behavior of the parametric
- * boundary coordinate system for multi-input gates.
- */
+// Component definitions
+const COMPONENTS = [
+  { type: 'Switch', icon: '⚡', needsDialog: false, title: 'Place Switch' },
+  { type: 'AND Gate', icon: '&', needsDialog: true, title: 'Place AND Gate' },
+  { type: 'OR Gate', icon: '≥1', needsDialog: true, title: 'Place OR Gate' },
+  { type: 'NAND Gate', icon: '⊼', needsDialog: true, title: 'Place NAND Gate' },
+  { type: 'NOR Gate', icon: '⊽', needsDialog: true, title: 'Place NOR Gate' },
+  { type: 'XOR Gate', icon: '⊕', needsDialog: true, title: 'Place XOR Gate' },
+  { type: 'XNOR Gate', icon: '⊙', needsDialog: true, title: 'Place XNOR Gate' },
+  { type: 'Buffer', icon: '▷', needsDialog: false, title: 'Place Buffer' },
+  { type: 'Inverter', icon: '▷○', needsDialog: false, title: 'Place Inverter' },
+  { type: 'Light', icon: '💡', needsDialog: false, title: 'Place Light' },
+];
 
-test.describe('Parametric Pin Positioning - Visual Verification', () => {
+// Helper functions
+const getComponent = (type: string) => COMPONENTS.find(c => c.type === type);
+
+const getComponentButton = (page: Page, type: string): Locator => {
+  const component = getComponent(type);
+  if (!component) throw new Error(`Component ${type} not found`);
+  return page.getByRole('button', { name: new RegExp(`^${component.icon}\\s+${component.type}$`) });
+};
+
+const getWorkspace = (page: Page) => page.locator('svg').first();
+
+const handleGateDialog = async (page: Page) => {
+  const dialog = page.locator('.gate-config-dialog');
+  await expect(dialog).toBeVisible({ timeout: 3000 });
+  const confirmButton = page.getByRole('button', { name: /create gate/i });
+  await confirmButton.click();
+  await expect(dialog).not.toBeVisible();
+};
+
+const placeComponent = async (page: Page, type: string, x: number, y: number) => {
+  const component = getComponent(type);
+  if (!component) throw new Error(`Component ${type} not found`);
+  
+  const button = getComponentButton(page, type);
+  await button.click();
+  
+  const workspace = getWorkspace(page);
+  await workspace.click({ position: { x, y } });
+  
+  if (component.needsDialog) {
+    await handleGateDialog(page);
+  }
+};
+
+test.describe('Logic Circuit Simulator - Component Placement', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
   });
 
-  test.describe('AND Gate Pin Positioning', () => {
-    test('should display 2-input AND gate with correctly spaced pins', async ({ page }) => {
-      // Add 2-input AND gate to canvas
-      // Verify pins are centered vertically with 15px spacing
-      // Verify pins align with left edge of gate shape
-      // Verify output pin is at right edge center
+  // Test all components with unified logic
+  for (const component of COMPONENTS) {
+    const testName = component.needsDialog 
+      ? `should place ${component.type} with configuration dialog`
+      : `should place ${component.type} on the canvas`;
+    
+    test(testName, async ({ page }, testInfo) => {
+      const button = getComponentButton(page, component.type);
+      
+      await expect(button).toBeVisible();
+      await button.click();
+      await expect(button).toHaveClass(/selected/);
+      
+      const workspace = getWorkspace(page);
+      await expect(workspace).toBeVisible();
+      await workspace.click({ position: { x: 300, y: 300 } });
+      
+      if (component.needsDialog) {
+        await handleGateDialog(page);
+      }
+      
+      await expect(button).not.toHaveClass(/selected/);
+      
+      // Attach screenshot to HTML report
+      const screenshot = await page.screenshot({ fullPage: true });
+      await testInfo.attach(`${component.type} placed`, {
+        body: screenshot,
+        contentType: 'image/png',
+      });
     });
+  }
 
-    test('should display 3-input AND gate with evenly distributed pins', async ({ page }) => {
-      // Add 3-input AND gate to canvas
-      // Verify pins span 30px (2 * 15px spacing)
-      // Verify all pins align with gate shape left edge
-      // Verify center pin is at gate vertical center
+  // Palette verification tests
+  for (const component of COMPONENTS) {
+    test(`should display ${component.type} in palette with correct properties`, async ({ page }) => {
+      const button = getComponentButton(page, component.type);
+      
+      await expect(button).toBeVisible();
+      await expect(button).toHaveAttribute('title', component.title);
+      await expect(button.locator('.palette-icon')).toContainText(component.icon);
+      await expect(button.locator('.palette-label')).toContainText(component.type);
     });
+  }
 
-    test('should display 8-input AND gate with maximum pin distribution', async ({ page }) => {
-      // Add 8-input AND gate to canvas
-      // Verify pins span 105px (7 * 15px spacing)
-      // Verify gate bounding box scales appropriately
-      // Verify visual alignment of all pins
+  // Component selection toggling tests
+  const selectionPairs = [
+    { from: 'Switch', to: 'AND Gate' },
+    { from: 'OR Gate', to: 'NAND Gate' },
+    { from: 'XOR Gate', to: 'Light' },
+    { from: 'Buffer', to: 'Inverter' },
+  ];
+
+  for (const pair of selectionPairs) {
+    test(`should toggle selection from ${pair.from} to ${pair.to}`, async ({ page }) => {
+      const fromButton = getComponentButton(page, pair.from);
+      const toButton = getComponentButton(page, pair.to);
+      
+      await fromButton.click();
+      await expect(fromButton).toHaveClass(/selected/);
+      
+      await toButton.click();
+      await expect(fromButton).not.toHaveClass(/selected/);
+      await expect(toButton).toHaveClass(/selected/);
     });
+  }
 
-    test('should maintain pin alignment when changing from 2 to 3 inputs', async ({ page }) => {
-      // Add 2-input AND gate
-      // Open configuration dialog
-      // Change to 3 inputs
-      // Verify pins do NOT shift horizontally
-      // Verify pins redistribute vertically correctly
-      // Verify gate shape remains aligned with pins
+  // Circuit building scenario tests
+  const circuitScenarios = [
+    {
+      name: 'simple AND circuit',
+      components: [
+        { type: 'Switch', x: 100, y: 200 },
+        { type: 'Switch', x: 100, y: 300 },
+        { type: 'AND Gate', x: 300, y: 250 },
+        { type: 'Light', x: 500, y: 250 },
+      ],
+    },
+    {
+      name: 'OR gate with inputs',
+      components: [
+        { type: 'Switch', x: 100, y: 200 },
+        { type: 'Switch', x: 100, y: 300 },
+        { type: 'OR Gate', x: 300, y: 250 },
+        { type: 'Light', x: 500, y: 250 },
+      ],
+    },
+    {
+      name: 'inverter chain',
+      components: [
+        { type: 'Switch', x: 100, y: 250 },
+        { type: 'Inverter', x: 250, y: 250 },
+        { type: 'Inverter', x: 400, y: 250 },
+        { type: 'Light', x: 550, y: 250 },
+      ],
+    },
+  ];
+
+  for (const scenario of circuitScenarios) {
+    test(`should build ${scenario.name}`, async ({ page }, testInfo) => {
+      const workspace = getWorkspace(page);
+      await expect(workspace).toBeVisible();
+      
+      for (const comp of scenario.components) {
+        await placeComponent(page, comp.type, comp.x, comp.y);
+      }
+      
+      // Verify all components were deselected after placement
+      const selectedButtons = page.locator('button.palette-item.selected');
+      await expect(selectedButtons).toHaveCount(0);
+      
+      // Attach screenshot to HTML report
+      const screenshot = await page.screenshot({ fullPage: true });
+      await testInfo.attach(`${scenario.name}`, {
+        body: screenshot,
+        contentType: 'image/png',
+      });
     });
+  }
 
-    test('should maintain pin alignment when changing from 3 to 2 inputs', async ({ page }) => {
-      // Add 3-input AND gate
-      // Change to 2 inputs via config dialog
-      // Verify pins collapse to 2-input spacing (15px)
-      // Verify no horizontal offset occurs
-      // Verify gate center remains stable
-    });
+  // General UI tests
+  test('should display app header', async ({ page }) => {
+    await expect(page.locator('h1')).toContainText('LogicLy');
+    await expect(page.locator('h1')).toContainText('Digital Logic Circuit Simulator');
   });
 
-  test.describe('OR Gate Pin Positioning', () => {
-    test('should display OR gate with correct curved shape alignment', async ({ page }) => {
-      // Add 2-input OR gate
-      // Verify pins align with concave left edge
-      // Verify output pin at right edge center
-    });
-
-    test('should scale OR gate shape with input count', async ({ page }) => {
-      // Add OR gates with 2, 4, 6 inputs
-      // Verify curved shape scales with bounding box
-      // Verify pins remain on left boundary
-    });
+  test('should display palette instructions', async ({ page }) => {
+    const instructions = page.locator('.palette-instructions');
+    await expect(instructions).toBeVisible();
+    await expect(instructions).toContainText('Click a component');
   });
 
-  test.describe('NAND Gate Pin Positioning', () => {
-    test('should display NAND gate with bubble at correct position', async ({ page }) => {
-      // Add 2-input NAND gate
-      // Verify inversion bubble is 4px from right edge
-      // Verify output pin is at bubble center
-      // Verify bubble doesn't overlap with gate body
-    });
-
-    test('should maintain bubble position across input count changes', async ({ page }) => {
-      // Add NAND gate, cycle through 2-8 inputs
-      // Verify bubble extension remains 4px
-      // Verify bubble stays centered vertically
-    });
-  });
-
-  test.describe('NOR Gate Pin Positioning', () => {
-    test('should display NOR gate with OR shape and inversion bubble', async ({ page }) => {
-      // Add NOR gate
-      // Verify OR-style curved shape
-      // Verify 4px bubble extension
-      // Verify output pin beyond bubble
-    });
-  });
-
-  test.describe('XOR Gate Pin Positioning', () => {
-    test('should display XOR gate with double input curve', async ({ page }) => {
-      // Add XOR gate
-      // Verify main OR-style shape
-      // Verify extra input curve behind main shape
-      // Verify pins align with left boundary
-      // Verify no bubble on output
-    });
-  });
-
-  test.describe('XNOR Gate Pin Positioning', () => {
-    test('should display XNOR gate with XOR shape and bubble', async ({ page }) => {
-      // Add XNOR gate
-      // Verify XOR double-curve shape
-      // Verify 4px inversion bubble
-      // Verify output pin placement
-    });
-  });
-
-  test.describe('Cross-Gate Consistency', () => {
-    test('should align all gates at same position when placed at same coordinates', async ({ page }) => {
-      // Place AND, OR, NAND, NOR, XOR, XNOR at same center point
-      // Verify all gates share same center position
-      // Verify consistent bounding box behavior
-    });
-
-    test('should use consistent 15px pin spacing across all gate types', async ({ page }) => {
-      // Add 3-input gates of each type
-      // Measure pin spacing for each
-      // Verify all use exactly 15px spacing
-    });
-
-    test('should use consistent bubble extension (4px) for inverted gates', async ({ page }) => {
-      // Add NAND, NOR, XNOR gates
-      // Measure bubble position relative to gate body
-      // Verify all use 4px extension
-    });
-  });
-});
-
-test.describe('Gate Configuration Dialog - Pin Updates', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-  });
-
-  test('should update pin positions immediately when input count changes', async ({ page }) => {
-    // Add AND gate
-    // Right-click to open context menu
-    // Click "Configure"
-    // Use input spinner to change from 2 to 5 inputs
-    // Verify pins update in real-time (if preview available)
-    // Click "Apply" or "OK"
-    // Verify final pin positions match expected parametric layout
-  });
-
-  test('should preserve gate center position when changing input count', async ({ page }) => {
-    // Add gate at specific position (e.g., 400, 300)
-    // Record center position
-    // Change input count via config dialog
-    // Verify gate center remains at same coordinates
-    // Verify only bounding box changes, not center
-  });
-
-  test('should handle rapid input count changes without visual glitches', async ({ page }) => {
-    // Add gate
-    // Open config dialog
-    // Rapidly change input count: 2 → 8 → 2 → 5 → 3
-    // Verify no flickering, offset, or misalignment
-    // Verify final state is visually correct
-  });
-});
-
-test.describe('Wiring Integration with Parametric Pins', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-  });
-
-  test('should allow wiring to pins after gate creation', async ({ page }) => {
-    // Add switch and AND gate
-    // Wire switch output to AND input pin
-    // Verify wire connects to exact pin center
-    // Verify wire renders correctly
-  });
-
-  test('should maintain wire connections when changing gate input count', async ({ page }) => {
-    // Add 2-input AND gate with wires connected
-    // Change to 3 inputs
-    // Verify existing wires remain connected to correct pins
-    // Verify pin IDs are preserved (IN0, IN1)
-    // Verify new pin (IN2) appears unwired
-  });
-
-  test('should update wire endpoints when gate is moved', async ({ page }) => {
-    // Add gate with wired pins
-    // Drag gate to new position
-    // Verify wires follow gate movement
-    // Verify wire endpoints track pin positions correctly
-  });
-
-  test('should handle wire removal when reducing input count below wired pins', async ({ page }) => {
-    // Add 4-input gate with all pins wired
-    // Change to 2 inputs
-    // Verify wires to IN2 and IN3 are removed gracefully
-    // Verify wires to IN0 and IN1 remain intact
-  });
-});
-
-test.describe('Visual Regression - Pin Alignment', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-  });
-
-  test('should render AND gate with correct visual alignment (screenshot)', async ({ page }) => {
-    // Add 3-input AND gate at fixed position
-    // Take screenshot
-    // Compare against baseline image
-    // Verify pins, gate shape, and labels align perfectly
-  });
-
-  test('should render all gate types with consistent spacing (screenshot)', async ({ page }) => {
-    // Add all 6 gate types in a grid layout
-    // All with 3 inputs
-    // Take screenshot
-    // Verify visual consistency across all gates
-  });
-
-  test('should handle gate dragging without pin misalignment (screenshot)', async ({ page }) => {
-    // Add gate
-    // Drag to multiple positions
-    // Take screenshots at each position
-    // Verify pins remain aligned with gate body
-  });
-});
-
-test.describe('Edge Cases and Stress Tests', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-  });
-
-  test('should handle minimum input count (2 inputs)', async ({ page }) => {
-    // Add gate with 2 inputs
-    // Verify pin spacing is 15px
-    // Verify bounding box uses minimum height (40px)
-  });
-
-  test('should handle maximum input count (8 inputs)', async ({ page }) => {
-    // Add gate with 8 inputs
-    // Verify pin span is 105px (7 * 15)
-    // Verify all pins are accessible and visible
-    // Verify gate shape scales appropriately
-  });
-
-  test('should handle multiple gates with different input counts simultaneously', async ({ page }) => {
-    // Add 10 gates with varying input counts (2-8)
-    // Verify each maintains correct pin positioning
-    // Drag gates around to verify positions remain stable
-  });
-
-  test('should handle zoom levels without breaking pin alignment', async ({ page }) => {
-    // Add gate with pins
-    // Zoom in (200%)
-    // Verify pins remain aligned at pixel boundaries
-    // Zoom out (50%)
-    // Verify alignment maintained
-  });
-});
-
-test.describe('Accessibility - Pin Interaction', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-  });
-
-  test('should allow keyboard navigation to select pins', async ({ page }) => {
-    // Add gate
-    // Use Tab key to navigate to pins
-    // Verify pins can receive focus
-    // Verify visual focus indicator
-  });
-
-  test('should display pin labels clearly for all input counts', async ({ page }) => {
-    // Add gates with 2, 4, 8 inputs
-    // Verify IN0, IN1, ..., IN7 labels are readable
-    // Verify labels don't overlap with pins or gate body
-  });
-
-  test('should maintain minimum click target size for pins', async ({ page }) => {
-    // Add gate with maximum inputs (8)
-    // Verify each pin has adequate click target (at least 4px radius)
-    // Verify pins can be individually selected/clicked
+  test('should have correct number of palette items', async ({ page }) => {
+    const paletteButtons = page.locator('button.palette-item');
+    await expect(paletteButtons).toHaveCount(COMPONENTS.length);
   });
 });

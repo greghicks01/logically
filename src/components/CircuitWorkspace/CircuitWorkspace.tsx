@@ -1,23 +1,13 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Switch, createSwitch, toggleSwitch } from '../../models/Switch';
-import { ANDGate, createANDGate, computeANDOutput } from '../../models/ANDGate';
-import { ORGate, createORGate, computeOROutput } from '../../models/ORGate';
-import { NANDGate, createNANDGate, computeNANDOutput } from '../../models/NANDGate';
-import { NORGate, createNORGate, computeNOROutput } from '../../models/NORGate';
-import { XORGate, createXORGate, computeXOROutput } from '../../models/XORGate';
-import { XNORGate, createXNORGate, computeXNOROutput } from '../../models/XNORGate';
+import { MultiInputGate, createMultiInputGate, computeGateOutput } from '../../models/MultiInputGate';
 import { Buffer, createBuffer, computeBufferOutput } from '../../models/Buffer';
 import { Inverter, createInverter, computeInverterOutput } from '../../models/Inverter';
 import { LightIndicator, createLightIndicator } from '../../models/LightIndicator';
 import { Wire } from '../../models/Wire';
 import { LogicLevel } from '../../models/LogicLevel';
 import { SwitchComponent } from '../Switch/SwitchComponent';
-import { ANDGateComponent } from '../ANDGate/ANDGateComponent';
-import { ORGateComponent } from '../ORGate/ORGateComponent';
-import { NANDGateComponent } from '../NANDGate/NANDGateComponent';
-import { NORGateComponent } from '../NORGate/NORGateComponent';
-import { XORGateComponent } from '../XORGate/XORGateComponent';
-import { XNORGateComponent } from '../XNORGate/XNORGateComponent';
+import { MultiInputGateComponent } from '../MultiInputGate/MultiInputGateComponent';
 import { BufferComponent } from '../Buffer/BufferComponent';
 import { InverterComponent } from '../Inverter/InverterComponent';
 import { LightIndicatorComponent } from '../LightIndicator/LightIndicatorComponent';
@@ -27,7 +17,7 @@ import { GateConfigDialog } from '../GateConfigDialog/GateConfigDialog';
 import { ContextMenu, ContextMenuOption } from '../ContextMenu/ContextMenu';
 import { ComponentType } from '../ComponentPalette/ComponentPalette';
 import { Point } from '../../models/Point';
-import { Pin } from '../../models/Pin';
+import { Pin } from '../../models/bases/MultiInputComponent';
 import { useWiring } from '../../hooks/useWiring';
 
 export interface CircuitWorkspaceProps {
@@ -46,17 +36,23 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
   selectedComponent,
   onComponentPlaced,
 }) => {
+  // Polymorphic state management - eliminates separate arrays for each gate type
   const [switches, setSwitches] = useState<Switch[]>([]);
-  const [andGates, setAndGates] = useState<ANDGate[]>([]);
-  const [orGates, setOrGates] = useState<ORGate[]>([]);
-  const [nandGates, setNandGates] = useState<NANDGate[]>([]);
-  const [norGates, setNorGates] = useState<NORGate[]>([]);
-  const [xorGates, setXorGates] = useState<XORGate[]>([]);
-  const [xnorGates, setXnorGates] = useState<XNORGate[]>([]);
+  const [multiInputGates, setMultiInputGates] = useState<MultiInputGate[]>([]);
   const [buffers, setBuffers] = useState<Buffer[]>([]);
   const [inverters, setInverters] = useState<Inverter[]>([]);
   const [lights, setLights] = useState<LightIndicator[]>([]);
   const [wires, setWires] = useState<Wire[]>([]);
+  
+  // Map UI component types to gate model types
+  const COMPONENT_TO_GATE_TYPE: Record<string, MultiInputGate['type']> = {
+    'and-gate': 'and',
+    'or-gate': 'or',
+    'nand-gate': 'nand',
+    'nor-gate': 'nor',
+    'xor-gate': 'xor',
+    'xnor-gate': 'xnor',
+  };
   
   // Gate configuration dialog state
   const [showGateDialog, setShowGateDialog] = useState(false);
@@ -141,28 +137,20 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
       return;
     }
     
-    // If creating a new gate
+    // Polymorphic gate creation - single code path for all gate types
     if (pendingGatePosition && pendingGateType) {
-      if (pendingGateType === 'and-gate') {
-        const newGate = createANDGate(generateId('and'), pendingGatePosition, config.numInputs, config.name);
-        setAndGates([...andGates, newGate]);
-      } else if (pendingGateType === 'or-gate') {
-        const newGate = createORGate(generateId('or'), pendingGatePosition, config.numInputs, config.name);
-        setOrGates([...orGates, newGate]);
-      } else if (pendingGateType === 'nand-gate') {
-        const newGate = createNANDGate(generateId('nand'), pendingGatePosition, config.numInputs, config.name);
-        setNandGates([...nandGates, newGate]);
-      } else if (pendingGateType === 'nor-gate') {
-        const newGate = createNORGate(generateId('nor'), pendingGatePosition, config.numInputs, config.name);
-        setNorGates([...norGates, newGate]);
-      } else if (pendingGateType === 'xor-gate') {
-        const newGate = createXORGate(generateId('xor'), pendingGatePosition, config.numInputs, config.name);
-        setXorGates([...xorGates, newGate]);
-      } else if (pendingGateType === 'xnor-gate') {
-        const newGate = createXNORGate(generateId('xnor'), pendingGatePosition, config.numInputs, config.name);
-        setXnorGates([...xnorGates, newGate]);
+      const gateType = COMPONENT_TO_GATE_TYPE[pendingGateType];
+      if (gateType) {
+        const newGate = createMultiInputGate(
+          gateType,
+          generateId(gateType),
+          pendingGatePosition,
+          config.numInputs,
+          config.name
+        );
+        setMultiInputGates([...multiInputGates, newGate]);
+        onComponentPlaced();
       }
-      onComponentPlaced();
     }
     setShowGateDialog(false);
     setPendingGatePosition(null);
@@ -212,34 +200,17 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
     // Get all pins of the component being deleted
     let componentPins: Pin[] = [];
     
+    // Polymorphic deletion - check if it's any gate type
+    const isGateType = Object.keys(COMPONENT_TO_GATE_TYPE).includes(componentType);
+    
     if (componentType === 'switch') {
       const component = switches.find(sw => sw.id === componentId);
       if (component) componentPins.push(component.outputPin);
       setSwitches(switches.filter(sw => sw.id !== componentId));
-    } else if (componentType === 'and-gate') {
-      const component = andGates.find(gate => gate.id === componentId);
+    } else if (isGateType) {
+      const component = multiInputGates.find(gate => gate.id === componentId);
       if (component) componentPins.push(...component.inputPins, component.outputPin);
-      setAndGates(andGates.filter(gate => gate.id !== componentId));
-    } else if (componentType === 'or-gate') {
-      const component = orGates.find(gate => gate.id === componentId);
-      if (component) componentPins.push(...component.inputPins, component.outputPin);
-      setOrGates(orGates.filter(gate => gate.id !== componentId));
-    } else if (componentType === 'nand-gate') {
-      const component = nandGates.find(gate => gate.id === componentId);
-      if (component) componentPins.push(...component.inputPins, component.outputPin);
-      setNandGates(nandGates.filter(gate => gate.id !== componentId));
-    } else if (componentType === 'nor-gate') {
-      const component = norGates.find(gate => gate.id === componentId);
-      if (component) componentPins.push(...component.inputPins, component.outputPin);
-      setNorGates(norGates.filter(gate => gate.id !== componentId));
-    } else if (componentType === 'xor-gate') {
-      const component = xorGates.find(gate => gate.id === componentId);
-      if (component) componentPins.push(...component.inputPins, component.outputPin);
-      setXorGates(xorGates.filter(gate => gate.id !== componentId));
-    } else if (componentType === 'xnor-gate') {
-      const component = xnorGates.find(gate => gate.id === componentId);
-      if (component) componentPins.push(...component.inputPins, component.outputPin);
-      setXnorGates(xnorGates.filter(gate => gate.id !== componentId));
+      setMultiInputGates(multiInputGates.filter(gate => gate.id !== componentId));
     } else if (componentType === 'buffer') {
       const component = buffers.find(buffer => buffer.id === componentId);
       if (component) componentPins.push(component.inputPin, component.outputPin);
@@ -283,7 +254,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
     setContextMenu(null);
     
     // Repropagate logic after wire deletion
-    propagateLogic(switches, andGates, orGates, nandGates, norGates, xorGates, xnorGates, buffers, inverters, lights, wires.filter(wire => wire.id !== wireId));
+    propagateLogic(switches, multiInputGates, buffers, inverters, lights, wires.filter(wire => wire.id !== wireId));
   };
 
   // Handle rotate component (90 degrees clockwise)
@@ -295,75 +266,50 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
 
   // Handle change number of inputs for multi-input gates
   const handleChangeInputs = (gateId: string) => {
-    // Try to find the gate in any of the gate arrays
-    let gate = andGates.find(g => g.id === gateId);
-    let gateType: ComponentType = 'and-gate';
-    
-    if (!gate) {
-      gate = orGates.find(g => g.id === gateId);
-      gateType = 'or-gate';
-    }
-    if (!gate) {
-      gate = nandGates.find(g => g.id === gateId);
-      gateType = 'nand-gate';
-    }
-    if (!gate) {
-      gate = norGates.find(g => g.id === gateId);
-      gateType = 'nor-gate';
-    }
-    if (!gate) {
-      gate = xorGates.find(g => g.id === gateId);
-      gateType = 'xor-gate';
-    }
-    if (!gate) {
-      gate = xnorGates.find(g => g.id === gateId);
-      gateType = 'xnor-gate';
-    }
-    
+    // Polymorphic gate lookup - single unified array
+    const gate = multiInputGates.find(g => g.id === gateId);
     if (!gate) return;
+    
+    // Map gate.type back to component type for UI
+    const gateTypeToComponent: Record<MultiInputGate['type'], ComponentType> = {
+      'and': 'and-gate',
+      'or': 'or-gate',
+      'nand': 'nand-gate',
+      'nor': 'nor-gate',
+      'xor': 'xor-gate',
+      'xnor': 'xnor-gate',
+    };
     
     // Open dialog with current gate settings
     setEditingGateId(gateId);
-    setPendingGateType(gateType);
+    setPendingGateType(gateTypeToComponent[gate.type]);
     setCurrentGateNumInputs(gate.numInputs);
     setCurrentGateName(gate.name || '');
     setShowGateDialog(true);
   };
 
-  // Handle gate config changes from dialog
+  // Handle gate config changes from dialog - Polymorphic approach
   const handleGateConfigUpdate = (config: { numInputs: number; name?: string }) => {
-    if (!editingGateId) return;
+    if (!editingGateId || !pendingGateType) return;
     
-    const numInputs = config.numInputs;
+    const gateType = COMPONENT_TO_GATE_TYPE[pendingGateType];
+    if (!gateType) return;
     
-    // Helper function to recreate gate with new number of inputs
-    const updateGateInputs = (g: any) => {
-      if (!g || g.id !== editingGateId) return g;
-      
-      // Recreate the gate using its factory function with parametric positioning
-      const position = g.position;
-      const name = config.name || g.name;
+    // Update gates polymorphically
+    const updatedGates = multiInputGates.map(g => {
+      if (g.id !== editingGateId) return g;
       
       // Preserve existing pin states
-      const preservedStates = g.inputPins.map((pin: Pin) => pin.state);
+      const preservedStates = g.inputPins.map(pin => pin.state);
       
-      // Recreate gate based on type
-      let newGate;
-      if (g.id.includes('and') && !g.id.includes('nand')) {
-        newGate = createANDGate(g.id, position, numInputs, name);
-      } else if (g.id.includes('or') && !g.id.includes('nor') && !g.id.includes('xor')) {
-        newGate = createORGate(g.id, position, numInputs, name);
-      } else if (g.id.includes('nand')) {
-        newGate = createNANDGate(g.id, position, numInputs, name);
-      } else if (g.id.includes('nor')) {
-        newGate = createNORGate(g.id, position, numInputs, name);
-      } else if (g.id.includes('xor') && !g.id.includes('xnor')) {
-        newGate = createXORGate(g.id, position, numInputs, name);
-      } else if (g.id.includes('xnor')) {
-        newGate = createXNORGate(g.id, position, numInputs, name);
-      } else {
-        return g; // Unknown type, return unchanged
-      }
+      // Recreate gate with new configuration
+      const newGate = createMultiInputGate(
+        gateType,
+        g.id,
+        g.position,
+        config.numInputs,
+        config.name || g.name
+      );
       
       // Restore preserved pin states
       for (let i = 0; i < Math.min(preservedStates.length, newGate.inputPins.length); i++) {
@@ -371,86 +317,34 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
       }
       
       return newGate;
-    };
+    });
     
-    // Collect updated gate arrays
-    let updatedSwitches = switches;
-    let updatedAndGates = andGates;
-    let updatedOrGates = orGates;
-    let updatedNandGates = nandGates;
-    let updatedNorGates = norGates;
-    let updatedXorGates = xorGates;
-    let updatedXnorGates = xnorGates;
-    let updatedBuffers = buffers;
-    let updatedInverters = inverters;
-    let updatedLights = lights;
-    
-    // Update the appropriate gate array based on pendingGateType
-    if (pendingGateType === 'and-gate') {
-      updatedAndGates = andGates.map(g => updateGateInputs(g) as ANDGate);
-    } else if (pendingGateType === 'or-gate') {
-      updatedOrGates = orGates.map(g => updateGateInputs(g) as ORGate);
-    } else if (pendingGateType === 'nand-gate') {
-      updatedNandGates = nandGates.map(g => updateGateInputs(g) as NANDGate);
-    } else if (pendingGateType === 'nor-gate') {
-      updatedNorGates = norGates.map(g => updateGateInputs(g) as NORGate);
-    } else if (pendingGateType === 'xor-gate') {
-      updatedXorGates = xorGates.map(g => updateGateInputs(g) as XORGate);
-    } else if (pendingGateType === 'xnor-gate') {
-      updatedXnorGates = xnorGates.map(g => updateGateInputs(g) as XNORGate);
-    }
+    // Find the updated gate
+    const updatedGate = updatedGates.find(g => g.id === editingGateId);
     
     // Update wires: remove wires connected to deleted pins, update pin references
-    const updatedWires = wires.filter(wire => {
-      // Find the updated gate that this wire might be connected to
-      const findUpdatedGate = (gateArrays: any[][]) => {
-        for (const gateArray of gateArrays) {
-          const gate = gateArray.find(g => g.id === editingGateId);
-          if (gate) return gate;
-        }
-        return null;
-      };
-      const updatedGate = findUpdatedGate([updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates]);
-      if (!updatedGate) return true;
+    const updatedWires = updatedGate ? wires.filter(wire => {
       const hasFromPin = updatedGate.inputPins.some(p => p.id === wire.fromPin.id) || updatedGate.outputPin.id === wire.fromPin.id;
       const hasToPin = updatedGate.inputPins.some(p => p.id === wire.toPin.id) || updatedGate.outputPin.id === wire.toPin.id;
       return hasFromPin && hasToPin;
     }).map(wire => {
       let newFromPin = wire.fromPin;
       let newToPin = wire.toPin;
-      // Find the updated gate
-      const findUpdatedGate = (gateArrays: any[][]) => {
-        for (const gateArray of gateArrays) {
-          const gate = gateArray.find(g => g.id === editingGateId);
-          if (gate) return gate;
-        }
-        return null;
-      };
-      const updatedGate = findUpdatedGate([updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates]);
-      if (updatedGate) {
-        const fromPin = updatedGate.inputPins.find(p => p.id === wire.fromPin.id) || (updatedGate.outputPin.id === wire.fromPin.id ? updatedGate.outputPin : null);
-        if (fromPin) newFromPin = fromPin;
-        const toPin = updatedGate.inputPins.find(p => p.id === wire.toPin.id) || (updatedGate.outputPin.id === wire.toPin.id ? updatedGate.outputPin : null);
-        if (toPin) newToPin = toPin;
-      }
+      
+      const fromPin = updatedGate.inputPins.find(p => p.id === wire.fromPin.id) || (updatedGate.outputPin.id === wire.fromPin.id ? updatedGate.outputPin : null);
+      if (fromPin) newFromPin = fromPin;
+      const toPin = updatedGate.inputPins.find(p => p.id === wire.toPin.id) || (updatedGate.outputPin.id === wire.toPin.id ? updatedGate.outputPin : null);
+      if (toPin) newToPin = toPin;
+      
       return { ...wire, fromPin: newFromPin, toPin: newToPin };
-    });
+    }) : wires;
     
-    // Set all updated states
-    setSwitches(updatedSwitches);
-    setAndGates(updatedAndGates);
-    setOrGates(updatedOrGates);
-    setNandGates(updatedNandGates);
-    setNorGates(updatedNorGates);
-    setXorGates(updatedXorGates);
-    setXnorGates(updatedXnorGates);
-    setBuffers(updatedBuffers);
-    setInverters(updatedInverters);
-    setLights(updatedLights);
+    // Update state
+    setMultiInputGates(updatedGates);
     setWires(updatedWires);
     
     // Propagate logic with updated state
-    propagateLogic(updatedSwitches, updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates, updatedBuffers, updatedInverters, updatedLights, updatedWires);
+    propagateLogic(switches, updatedGates, buffers, inverters, lights, updatedWires);
     
     // Reset editing state
     setEditingGateId(null);
@@ -460,7 +354,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
     setCurrentGateName('');
   };
 
-  // Handle mouse move for wire preview
+  // Handle mouse move for wire preview and dragging - Polymorphic approach
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
     // Handle dragging
     if (draggedComponent && svgRef.current) {
@@ -470,7 +364,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
       const newPosition: Point = { x, y };
       
       // Helper function to update multi-input gate positions
-      const updateGatePosition = (gate: ANDGate | ORGate | NANDGate | NORGate | XORGate | XNORGate) => {
+      const updateGatePosition = (gate: MultiInputGate) => {
         // Calculate position delta
         const deltaX = newPosition.x - gate.position.x;
         const deltaY = newPosition.y - gate.position.y;
@@ -487,35 +381,17 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
         };
       };
       
-      // Update component position
+      // Polymorphic component update
+      const isGateType = Object.keys(COMPONENT_TO_GATE_TYPE).includes(draggedComponent.type);
+      
       if (draggedComponent.type === 'switch') {
         setSwitches(switches.map(sw => 
           sw.id === draggedComponent.id 
             ? { ...sw, position: newPosition, outputPin: { ...sw.outputPin, position: { x: newPosition.x + 50, y: newPosition.y + 15 } } }
             : sw
         ));
-      } else if (draggedComponent.type === 'and-gate') {
-        setAndGates(andGates.map(gate => 
-          gate.id === draggedComponent.id ? updateGatePosition(gate) : gate
-        ));
-      } else if (draggedComponent.type === 'or-gate') {
-        setOrGates(orGates.map(gate => 
-          gate.id === draggedComponent.id ? updateGatePosition(gate) : gate
-        ));
-      } else if (draggedComponent.type === 'nand-gate') {
-        setNandGates(nandGates.map(gate => 
-          gate.id === draggedComponent.id ? updateGatePosition(gate) : gate
-        ));
-      } else if (draggedComponent.type === 'nor-gate') {
-        setNorGates(norGates.map(gate => 
-          gate.id === draggedComponent.id ? updateGatePosition(gate) : gate
-        ));
-      } else if (draggedComponent.type === 'xor-gate') {
-        setXorGates(xorGates.map(gate => 
-          gate.id === draggedComponent.id ? updateGatePosition(gate) : gate
-        ));
-      } else if (draggedComponent.type === 'xnor-gate') {
-        setXnorGates(xnorGates.map(gate => 
+      } else if (isGateType) {
+        setMultiInputGates(multiInputGates.map(gate => 
           gate.id === draggedComponent.id ? updateGatePosition(gate) : gate
         ));
       } else if (draggedComponent.type === 'buffer') {
@@ -621,40 +497,30 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
         const updatedWires = [...wires, newWire];
         setWires(updatedWires);
         // Propagate logic after wiring with updated state
-        setTimeout(() => propagateLogic(switches, andGates, orGates, nandGates, norGates, xorGates, xnorGates, buffers, inverters, lights, updatedWires), 10);
+        setTimeout(() => propagateLogic(switches, multiInputGates, buffers, inverters, lights, updatedWires), 10);
       }
     }
-  }, [wiringState.isWiring, startWiring, completeWiring, wires, switches, andGates, orGates, nandGates, norGates, xorGates, xnorGates, buffers, inverters, lights]);
+  }, [wiringState.isWiring, startWiring, completeWiring, wires, switches, multiInputGates, buffers, inverters, lights]);
 
   // Handle switch toggle
   const handleSwitchToggle = (id: string) => {
     const updatedSwitches = switches.map((sw) => (sw.id === id ? toggleSwitch(sw) : sw));
     setSwitches(updatedSwitches);
     // Propagate changes through circuit after state update
-    setTimeout(() => propagateLogic(updatedSwitches, andGates, orGates, nandGates, norGates, xorGates, xnorGates, buffers, inverters, lights, wires), 10);
+    setTimeout(() => propagateLogic(updatedSwitches, multiInputGates, buffers, inverters, lights, wires), 10);
   };
 
-  // Propagate logic through the circuit
+  // Propagate logic through the circuit - Polymorphic approach
   const propagateLogic = (
     currentSwitches = switches, 
-    currentAndGates = andGates,
-    currentOrGates = orGates,
-    currentNandGates = nandGates,
-    currentNorGates = norGates,
-    currentXorGates = xorGates,
-    currentXnorGates = xnorGates,
+    currentMultiInputGates = multiInputGates,
     currentBuffers = buffers, 
     currentInverters = inverters, 
     currentLights = lights, 
     currentWires = wires
   ) => {
     // Iteratively propagate through gates until stable (handles multi-level circuits)
-    let updatedAndGates = [...currentAndGates];
-    let updatedOrGates = [...currentOrGates];
-    let updatedNandGates = [...currentNandGates];
-    let updatedNorGates = [...currentNorGates];
-    let updatedXorGates = [...currentXorGates];
-    let updatedXnorGates = [...currentXnorGates];
+    let updatedMultiInputGates = [...currentMultiInputGates];
     let updatedBuffers = [...currentBuffers];
     let updatedInverters = [...currentInverters];
     let maxIterations = 10; // Prevent infinite loops
@@ -665,8 +531,8 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
       changed = false;
       iteration++;
       
-      // Helper function to update gate inputs and outputs
-      const updateMultiInputGate = (gate: ANDGate | ORGate | NANDGate | NORGate | XORGate | XNORGate, computeOutput: (...inputs: LogicLevel[]) => LogicLevel) => {
+      // Polymorphic helper function to update gate inputs and outputs
+      const updateMultiInputGate = (gate: MultiInputGate) => {
         let newGate = { ...gate, inputPins: [...gate.inputPins] };
         let gateChanged = false;
         
@@ -693,7 +559,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
               const isStartAtPin = Math.abs(wireStart.x - inputPin.position.x) < 8 && 
                                    Math.abs(wireStart.y - inputPin.position.y) < 8;
               const sourcePos = isStartAtPin ? wireEnd : wireStart;
-              const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates, updatedBuffers, updatedInverters);
+              const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedMultiInputGates, updatedBuffers, updatedInverters);
               if (sourceState !== null && sourceState !== updatedPin.state) {
                 updatedPin = { ...updatedPin, state: sourceState };
                 gateChanged = true;
@@ -704,9 +570,9 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
           return updatedPin;
         });
         
-        // Compute output based on all inputs
+        // Polymorphic output computation using gate type discriminator
         const inputStates = newGate.inputPins.map(pin => pin.state);
-        const output = computeOutput(...inputStates);
+        const output = computeGateOutput(newGate.type, ...inputStates);
         if (output !== newGate.outputPin.state) {
           newGate = {
             ...newGate,
@@ -719,13 +585,8 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
         return newGate;
       };
       
-      // Step 1: Update all gate types
-      updatedAndGates = updatedAndGates.map(gate => updateMultiInputGate(gate, computeANDOutput));
-      updatedOrGates = updatedOrGates.map(gate => updateMultiInputGate(gate, computeOROutput));
-      updatedNandGates = updatedNandGates.map(gate => updateMultiInputGate(gate, computeNANDOutput));
-      updatedNorGates = updatedNorGates.map(gate => updateMultiInputGate(gate, computeNOROutput));
-      updatedXorGates = updatedXorGates.map(gate => updateMultiInputGate(gate, computeXOROutput));
-      updatedXnorGates = updatedXnorGates.map(gate => updateMultiInputGate(gate, computeXNOROutput));
+      // Step 1: Update all multi-input gates polymorphically
+      updatedMultiInputGates = updatedMultiInputGates.map(updateMultiInputGate);
       
       // Step 1b: Update buffer inputs and outputs
       const newBuffers = updatedBuffers.map((buffer) => {
@@ -749,7 +610,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
             const isStartAtInput = Math.abs(wireStart.x - buffer.inputPin.position.x) < 8 && 
                                     Math.abs(wireStart.y - buffer.inputPin.position.y) < 8;
             const sourcePos = isStartAtInput ? wireEnd : wireStart;
-            const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates, updatedBuffers, updatedInverters);
+            const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedMultiInputGates, updatedBuffers, updatedInverters);
             if (sourceState !== null && sourceState !== newBuffer.inputPin.state) {
               newBuffer = {
                 ...newBuffer,
@@ -798,7 +659,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
             const isStartAtInput = Math.abs(wireStart.x - inverter.inputPin.position.x) < 8 && 
                                     Math.abs(wireStart.y - inverter.inputPin.position.y) < 8;
             const sourcePos = isStartAtInput ? wireEnd : wireStart;
-            const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates, updatedBuffers, updatedInverters);
+            const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedMultiInputGates, updatedBuffers, updatedInverters);
             if (sourceState !== null && sourceState !== newInverter.inputPin.state) {
               newInverter = {
                 ...newInverter,
@@ -826,12 +687,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
       updatedInverters = newInverters;
     }
     
-    setAndGates(updatedAndGates);
-    setOrGates(updatedOrGates);
-    setNandGates(updatedNandGates);
-    setNorGates(updatedNorGates);
-    setXorGates(updatedXorGates);
-    setXnorGates(updatedXnorGates);
+    setMultiInputGates(updatedMultiInputGates);
     setBuffers(updatedBuffers);
     setInverters(updatedInverters);
     
@@ -843,8 +699,8 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
       const wireEnd = wire.path[wire.path.length - 1];
       
       // Find the source pin (could be at either end)
-      const startState = findPinStateAtPosition(wireStart, currentSwitches, updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates, updatedBuffers, updatedInverters);
-      const endState = findPinStateAtPosition(wireEnd, currentSwitches, updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates, updatedBuffers, updatedInverters);
+      const startState = findPinStateAtPosition(wireStart, currentSwitches, updatedMultiInputGates, updatedBuffers, updatedInverters);
+      const endState = findPinStateAtPosition(wireEnd, currentSwitches, updatedMultiInputGates, updatedBuffers, updatedInverters);
       
       // Use whichever end has a source (output pin)
       const logicLevel = startState !== null ? startState : (endState !== null ? endState : LogicLevel.HI_Z);
@@ -878,7 +734,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
           const isStartAtLight = Math.abs(wireStart.x - light.inputPin.position.x) < 8 && 
                                   Math.abs(wireStart.y - light.inputPin.position.y) < 8;
           const sourcePos = isStartAtLight ? wireEnd : wireStart;
-          const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedAndGates, updatedOrGates, updatedNandGates, updatedNorGates, updatedXorGates, updatedXnorGates, updatedBuffers, updatedInverters);
+          const sourceState = findPinStateAtPosition(sourcePos, currentSwitches, updatedMultiInputGates, updatedBuffers, updatedInverters);
           if (sourceState !== null) {
             inputState = sourceState;
           }
@@ -895,16 +751,11 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
     setLights(updatedLights);
   };
 
-  // Find the logic state at a given position
+  // Find the logic state at a given position - Polymorphic approach
   const findPinStateAtPosition = (
     pos: Point, 
     currentSwitches = switches, 
-    currentAndGates = andGates,
-    currentOrGates = orGates,
-    currentNandGates = nandGates,
-    currentNorGates = norGates,
-    currentXorGates = xorGates,
-    currentXnorGates = xnorGates,
+    currentMultiInputGates = multiInputGates,
     currentBuffers = buffers, 
     currentInverters = inverters
   ) => {
@@ -916,16 +767,8 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
       }
     }
     
-    // Check all gate types
-    const allGates = [
-      ...currentAndGates,
-      ...currentOrGates,
-      ...currentNandGates,
-      ...currentNorGates,
-      ...currentXorGates,
-      ...currentXnorGates
-    ];
-    for (const gate of allGates) {
+    // Polymorphic gate check - single unified loop
+    for (const gate of currentMultiInputGates) {
       if (Math.abs(pos.x - gate.outputPin.position.x) < 8 && 
           Math.abs(pos.y - gate.outputPin.position.y) < 8) {
         return gate.outputPin.state;
@@ -951,27 +794,13 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
     return null;
   };
 
-  // Get all pins for rendering
+  // Get all pins for rendering - Polymorphic approach
   const getAllPins = (): Pin[] => {
     const pins: Pin[] = [];
     
     switches.forEach(sw => pins.push(sw.outputPin));
-    andGates.forEach(gate => {
-      pins.push(...gate.inputPins, gate.outputPin);
-    });
-    orGates.forEach(gate => {
-      pins.push(...gate.inputPins, gate.outputPin);
-    });
-    nandGates.forEach(gate => {
-      pins.push(...gate.inputPins, gate.outputPin);
-    });
-    norGates.forEach(gate => {
-      pins.push(...gate.inputPins, gate.outputPin);
-    });
-    xorGates.forEach(gate => {
-      pins.push(...gate.inputPins, gate.outputPin);
-    });
-    xnorGates.forEach(gate => {
+    // Unified multi-input gate iteration
+    multiInputGates.forEach(gate => {
       pins.push(...gate.inputPins, gate.outputPin);
     });
     buffers.forEach(buffer => {
@@ -1030,77 +859,30 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
           </g>
         ))}
 
-        {/* Render AND gates */}
-        {andGates.map((gate) => (
-          <g
-            key={gate.id}
-            onMouseDown={(e) => handleComponentMouseDown(e, 'and-gate', gate.id, gate.position)}
-            onContextMenu={(e) => handleComponentRightClick(e, 'and-gate', gate.id)}
-            style={{ cursor: draggedComponent?.id === gate.id ? 'grabbing' : 'grab' }}
-          >
-            <ANDGateComponent component={gate} />
-          </g>
-        ))}
-
-        {/* Render OR gates */}
-        {orGates.map((gate) => (
-          <g
-            key={gate.id}
-            onMouseDown={(e) => handleComponentMouseDown(e, 'or-gate', gate.id, gate.position)}
-            onContextMenu={(e) => handleComponentRightClick(e, 'or-gate', gate.id)}
-            style={{ cursor: draggedComponent?.id === gate.id ? 'grabbing' : 'grab' }}
-          >
-            <ORGateComponent component={gate} />
-          </g>
-        ))}
-
-        {/* Render NAND gates */}
-        {nandGates.map((gate) => (
-          <g
-            key={gate.id}
-            onMouseDown={(e) => handleComponentMouseDown(e, 'nand-gate', gate.id, gate.position)}
-            onContextMenu={(e) => handleComponentRightClick(e, 'nand-gate', gate.id)}
-            style={{ cursor: draggedComponent?.id === gate.id ? 'grabbing' : 'grab' }}
-          >
-            <NANDGateComponent component={gate} />
-          </g>
-        ))}
-
-        {/* Render NOR gates */}
-        {norGates.map((gate) => (
-          <g
-            key={gate.id}
-            onMouseDown={(e) => handleComponentMouseDown(e, 'nor-gate', gate.id, gate.position)}
-            onContextMenu={(e) => handleComponentRightClick(e, 'nor-gate', gate.id)}
-            style={{ cursor: draggedComponent?.id === gate.id ? 'grabbing' : 'grab' }}
-          >
-            <NORGateComponent component={gate} />
-          </g>
-        ))}
-
-        {/* Render XOR gates */}
-        {xorGates.map((gate) => (
-          <g
-            key={gate.id}
-            onMouseDown={(e) => handleComponentMouseDown(e, 'xor-gate', gate.id, gate.position)}
-            onContextMenu={(e) => handleComponentRightClick(e, 'xor-gate', gate.id)}
-            style={{ cursor: draggedComponent?.id === gate.id ? 'grabbing' : 'grab' }}
-          >
-            <XORGateComponent component={gate} />
-          </g>
-        ))}
-
-        {/* Render XNOR gates */}
-        {xnorGates.map((gate) => (
-          <g
-            key={gate.id}
-            onMouseDown={(e) => handleComponentMouseDown(e, 'xnor-gate', gate.id, gate.position)}
-            onContextMenu={(e) => handleComponentRightClick(e, 'xnor-gate', gate.id)}
-            style={{ cursor: draggedComponent?.id === gate.id ? 'grabbing' : 'grab' }}
-          >
-            <XNORGateComponent component={gate} />
-          </g>
-        ))}
+        {/* Render multi-input gates polymorphically */}
+        {multiInputGates.map((gate) => {
+          // Map gate.type to component type for event handlers
+          const gateTypeToComponent: Record<MultiInputGate['type'], string> = {
+            'and': 'and-gate',
+            'or': 'or-gate',
+            'nand': 'nand-gate',
+            'nor': 'nor-gate',
+            'xor': 'xor-gate',
+            'xnor': 'xnor-gate',
+          };
+          const componentType = gateTypeToComponent[gate.type];
+          
+          return (
+            <g
+              key={gate.id}
+              onMouseDown={(e) => handleComponentMouseDown(e, componentType, gate.id, gate.position)}
+              onContextMenu={(e) => handleComponentRightClick(e, componentType, gate.id)}
+              style={{ cursor: draggedComponent?.id === gate.id ? 'grabbing' : 'grab' }}
+            >
+              <MultiInputGateComponent component={gate} />
+            </g>
+          );
+        })}
 
         {/* Render buffers */}
         {buffers.map((buffer) => (
@@ -1191,7 +973,7 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
           ? `Click on canvas to place ${selectedComponent}`
           : 'Select a component from the palette or click a pin to start wiring'}
         {' | '}
-        Components: {switches.length} switches, {andGates.length + orGates.length + nandGates.length + norGates.length + xorGates.length + xnorGates.length} gates, {buffers.length} buffers, {inverters.length} inverters, {lights.length} lights, {wires.length} wires
+        Components: {switches.length} switches, {multiInputGates.length} gates, {buffers.length} buffers, {inverters.length} inverters, {lights.length} lights, {wires.length} wires
       </div>
 
       {/* Gate configuration dialog */}
