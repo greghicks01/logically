@@ -19,6 +19,9 @@ import { ComponentType } from '../ComponentPalette/ComponentPalette';
 import { Point } from '../../models/Point';
 import { Pin } from '../../models/bases/MultiInputComponent';
 import { useWiring } from '../../hooks/useWiring';
+import { TruthTablePanel } from '../TruthTablePanel/TruthTablePanel';
+import { TruthTable } from '../../models/TruthTable';
+import { TruthTableGenerator } from '../../services/TruthTableGenerator';
 
 export interface CircuitWorkspaceProps {
   width: number;
@@ -67,6 +70,11 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
   
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; componentType: string; componentId: string } | null>(null);
+  
+  // Truth table state
+  const [truthTables, setTruthTables] = useState<Map<string, TruthTable>>(new Map());
+  const [truthTablePositions, setTruthTablePositions] = useState<Map<string, Point>>(new Map());
+  const truthTableGenerator = useRef(new TruthTableGenerator());
   
   const svgRef = useRef<SVGSVGElement>(null);
   const componentIdCounter = useRef(0);
@@ -352,6 +360,60 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
     setPendingGateType(null);
     setCurrentGateNumInputs(2);
     setCurrentGateName('');
+  };
+
+  // Handle truth table toggle for multi-input gates
+  const handleToggleTruthTable = (componentType: string, componentId: string) => {
+    setContextMenu(null);
+    
+    // Only support multi-input gates for now (can extend to inverter/buffer later)
+    const isGateType = Object.keys(COMPONENT_TO_GATE_TYPE).includes(componentType);
+    if (!isGateType) return;
+    
+    const gate = multiInputGates.find(g => g.id === componentId);
+    if (!gate) return;
+    
+    // Check if truth table already exists
+    if (truthTables.has(componentId)) {
+      // Toggle visibility by removing it
+      const newTables = new Map(truthTables);
+      newTables.delete(componentId);
+      setTruthTables(newTables);
+      
+      // Also remove position
+      const newPositions = new Map(truthTablePositions);
+      newPositions.delete(componentId);
+      setTruthTablePositions(newPositions);
+    } else {
+      // Generate and show new truth table
+      let table = truthTableGenerator.current.generateForGate(gate, 'multi-input');
+      
+      // Update current row to match gate's current state
+      table = truthTableGenerator.current.updateCurrentRow(table, gate, 'multi-input');
+      
+      // Mark as visible
+      table = { ...table, isVisible: true };
+      
+      const newTables = new Map(truthTables);
+      newTables.set(componentId, table);
+      setTruthTables(newTables);
+      
+      // Set initial position next to the gate
+      const initialPosition = {
+        x: gate.position.x + 150,
+        y: gate.position.y - 100
+      };
+      const newPositions = new Map(truthTablePositions);
+      newPositions.set(componentId, initialPosition);
+      setTruthTablePositions(newPositions);
+    }
+  };
+
+  // Handle truth table position change (for dragging)
+  const handleTruthTablePositionChange = (gateId: string, newPosition: Point) => {
+    const newPositions = new Map(truthTablePositions);
+    newPositions.set(gateId, newPosition);
+    setTruthTablePositions(newPositions);
   };
 
   // Handle mouse move for wire preview and dragging - Polymorphic approach
@@ -1006,6 +1068,10 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
               ...(['and-gate', 'or-gate', 'nand-gate', 'nor-gate', 'xor-gate', 'xnor-gate'].includes(contextMenu.componentType) ? [{
                 label: 'Change Inputs...',
                 onClick: () => handleChangeInputs(contextMenu.componentId)
+              },
+              {
+                label: truthTables.has(contextMenu.componentId) ? 'Hide Truth Table' : 'Show Truth Table',
+                onClick: () => handleToggleTruthTable(contextMenu.componentType, contextMenu.componentId)
               }] : []),
               {
                 label: 'Duplicate',
@@ -1023,6 +1089,25 @@ export const CircuitWorkspace: React.FC<CircuitWorkspaceProps> = ({
           onClose={() => setContextMenu(null)}
         />
       )}
+      
+      {/* Truth table panels - rendered as floating panels next to gates */}
+      {Array.from(truthTables.entries()).map(([gateId, table]) => {
+        if (!table.isVisible) return null;
+        
+        // Get the stored position for this truth table
+        const panelPosition = truthTablePositions.get(gateId);
+        if (!panelPosition) return null;
+        
+        return (
+          <TruthTablePanel
+            key={gateId}
+            table={table}
+            position={panelPosition}
+            onClose={() => handleToggleTruthTable('', gateId)}
+            onPositionChange={(newPos) => handleTruthTablePositionChange(gateId, newPos)}
+          />
+        );
+      })}
     </div>
   );
 };
